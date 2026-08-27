@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServer } from "@/lib/supabase-server";
 
-const supabase = getSupabaseServer();
-
 export const dynamic = "force-dynamic";
 
 // GET all orders (for admin)
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const userEmail = url.searchParams.get("email");
+
+  const supabase = getSupabaseServer();
 
   let query = supabase.from("orders").select("*").order("created_at", { ascending: false });
 
@@ -19,6 +19,7 @@ export async function GET(request: Request) {
   const { data, error } = await query;
 
   if (error) {
+    console.error("Orders GET error:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
@@ -29,9 +30,12 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    const supabase = getSupabaseServer();
+
+    const orderId = body.id || `GG-${Date.now().toString(36).toUpperCase()}`;
 
     const order = {
-      id: body.id || `GG-${Date.now().toString(36).toUpperCase()}`,
+      id: orderId,
       user_id: body.userId || null,
       user_email: body.userEmail,
       user_name: body.userName,
@@ -46,6 +50,8 @@ export async function POST(request: Request) {
       payment_id: body.paymentId || null,
     };
 
+    console.log("Attempting to save order:", orderId);
+
     const { data, error } = await supabase
       .from("orders")
       .insert(order)
@@ -53,13 +59,17 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      console.error("Order save failed:", error.message);
-      // Still return success with the order data for demo
-      return NextResponse.json({ ...order, demo: true });
+      console.error("Order insert failed:", error.message, error.code, error.details);
+      return NextResponse.json(
+        { error: error.message, code: error.code, details: error.details, order },
+        { status: 500 }
+      );
     }
 
+    console.log("Order saved successfully:", orderId);
     return NextResponse.json(data);
   } catch (err) {
+    console.error("Order API exception:", err);
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }

@@ -162,12 +162,14 @@ export default function CheckoutPage() {
             name: "Golden Grace",
             description: `Order - ${totalItems} items`,              handler: async (response: RazorpayResponse) => {
               const newOrderId = response.razorpay_payment_id || `GG-${Date.now().toString(36).toUpperCase()}`;
-              await saveOrder(newOrderId, orderItems, response.razorpay_payment_id);
-              await refreshOrders();
-              setOrderId(newOrderId);
-              setOrderPlaced(true);
-              setCurrentStep("confirmation");
-              clearCart();
+              const saved = await saveOrder(newOrderId, orderItems, response.razorpay_payment_id);
+              if (saved) {
+                await refreshOrders();
+                setOrderId(newOrderId);
+                setOrderPlaced(true);
+                setCurrentStep("confirmation");
+                clearCart();
+              }
               setProcessing(false);
             },
             prefill: {
@@ -193,20 +195,26 @@ export default function CheckoutPage() {
 
     // Demo mode
     const newOrderId = `GG-${Date.now().toString(36).toUpperCase()}`;
-    await saveOrder(newOrderId, orderItems, null);
-    await refreshOrders();
-    setTimeout(() => {
-      setOrderId(newOrderId);
-      setOrderPlaced(true);
-      setCurrentStep("confirmation");
-      clearCart();
+    const saved = await saveOrder(newOrderId, orderItems, null);
+    if (saved) {
+      await refreshOrders();
+      setTimeout(() => {
+        setOrderId(newOrderId);
+        setOrderPlaced(true);
+        setCurrentStep("confirmation");
+        clearCart();
+        setProcessing(false);
+      }, 1500);
+    } else {
       setProcessing(false);
-    }, 1500);
+    }
   };
 
-  const saveOrder = async (id: string, orderItems: Record<string, unknown>[], paymentId: string | null) => {
+  const [orderError, setOrderError] = useState("");
+
+  const saveOrder = async (id: string, orderItems: Record<string, unknown>[], paymentId: string | null): Promise<boolean> => {
     try {
-      await fetch("/api/orders", {
+      const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -225,6 +233,14 @@ export default function CheckoutPage() {
         }),
       });
 
+      const result = await res.json();
+
+      if (!res.ok) {
+        console.error("Order save failed:", result.error);
+        setOrderError(result.error || "Failed to save order. Please try again.");
+        return false;
+      }
+
       // Send confirmation email (non-blocking)
       fetch("/api/send-order-confirmation", {
         method: "POST",
@@ -238,8 +254,12 @@ export default function CheckoutPage() {
           shippingAddress: address,
         }),
       }).catch(() => {});
-    } catch {
-      console.error("Failed to save order");
+
+      return true;
+    } catch (err) {
+      console.error("Failed to save order:", err);
+      setOrderError("Network error. Please try again.");
+      return false;
     }
   };
 
@@ -412,6 +432,11 @@ export default function CheckoutPage() {
 
             {currentStep === "payment" && (
               <div className="bg-white rounded-2xl border border-gray-100 p-6">
+                {orderError && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-lg flex items-center gap-2">
+                    <span className="text-red-500 text-sm">{orderError}</span>
+                  </div>
+                )}
                 <h2 className="text-lg font-bold text-gray-800 mb-4">Payment Method</h2>
                 <div className="space-y-3">
                   {[
