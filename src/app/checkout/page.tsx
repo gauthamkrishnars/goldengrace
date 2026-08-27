@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Check, CreditCard, MapPin, Package, ArrowLeft, ArrowRight, Shield, Loader2, LogIn } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { formatPrice } from "@/data/products";
+import { supabase } from "@/lib/supabase";
 import Footer from "@/components/Footer";
 
 type Step = "address" | "payment" | "confirmation";
@@ -66,6 +67,35 @@ export default function CheckoutPage() {
 
   const [paymentMethod, setPaymentMethod] = useState("razorpay");
   const stepIndex = steps.findIndex((s) => s.id === currentStep);
+
+  // Pre-fill address from saved addresses
+  useEffect(() => {
+    if (!isLoggedIn || !user) return;
+    const fetchDefaultAddress = async () => {
+      try {
+        const { data } = await supabase
+          .from("addresses")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("is_default", true)
+          .single();
+        if (data) {
+          setAddress({
+            fullName: data.full_name,
+            phone: data.phone,
+            addressLine1: data.address_line1,
+            addressLine2: data.address_line2 || "",
+            city: data.city,
+            state: data.state,
+            pincode: data.pincode,
+          });
+        }
+      } catch {
+        // No default address
+      }
+    };
+    fetchDefaultAddress();
+  }, [isLoggedIn, user]);
 
   const handleCheckoutLogin = async (e: React.FormEvent) => {
     e.preventDefault();

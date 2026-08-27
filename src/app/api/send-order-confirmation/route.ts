@@ -11,7 +11,7 @@ interface OrderEmailData {
   customerEmail: string;
   items: { name: string; quantity: number; price: number }[];
   total: number;
-  shippingAddress: {
+  shippingAddress?: {
     fullName?: string;
     addressLine1?: string;
     addressLine2?: string;
@@ -19,6 +19,9 @@ interface OrderEmailData {
     state?: string;
     pincode?: string;
   };
+  statusUpdate?: boolean;
+  statusMessage?: string;
+  newStatus?: string;
 }
 
 function formatPrice(price: number): string {
@@ -47,15 +50,16 @@ function buildEmailHtml(data: OrderEmailData): string {
     )
     .join("");
 
-  const address = [
-    data.shippingAddress.addressLine1,
-    data.shippingAddress.addressLine2,
-    data.shippingAddress.city,
-    data.shippingAddress.state,
-    data.shippingAddress.pincode,
+  const addr = data.shippingAddress;
+  const address = addr ? [
+    addr.addressLine1,
+    addr.addressLine2,
+    addr.city,
+    addr.state,
+    addr.pincode,
   ]
     .filter(Boolean)
-    .join(", ");
+    .join(", ") : "";
 
   return `
     <!DOCTYPE html>
@@ -122,7 +126,7 @@ function buildEmailHtml(data: OrderEmailData): string {
           <div style="background:#f9fafb;border-radius:12px;padding:16px;margin-bottom:24px;">
             <p style="color:#6b7280;font-size:12px;margin:0 0 8px;font-weight:600;text-transform:uppercase;">Shipping Address</p>
             <p style="color:#374151;font-size:14px;margin:0;line-height:1.5;">
-              ${data.shippingAddress.fullName || data.customerName}<br/>
+              ${addr?.fullName || data.customerName}<br/>
               ${address}
             </p>
           </div>
@@ -152,6 +156,45 @@ function buildEmailHtml(data: OrderEmailData): string {
   `;
 }
 
+function buildStatusUpdateHtml(data: OrderEmailData): string {
+  const statusEmojis: Record<string, string> = {
+    confirmed: "✅",
+    processing: "⚙️",
+    shipped: "🚚",
+    delivered: "📦",
+    cancelled: "❌",
+    pending: "⏳",
+  };
+  const emoji = statusEmojis[data.newStatus?.toLowerCase() || ""] || "📋";
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8"></head>
+    <body style="margin:0;padding:0;background:#f9fafb;font-family:Arial,sans-serif;">
+      <div style="max-width:600px;margin:0 auto;background:#ffffff;">
+        <div style="background:#587284;padding:24px 32px;text-align:center;">
+          <h1 style="color:#ffffff;font-size:24px;margin:0;letter-spacing:2px;">GOLDEN GRACE</h1>
+        </div>
+        <div style="padding:32px;text-align:center;">
+          <div style="font-size:48px;margin-bottom:16px;">${emoji}</div>
+          <h2 style="color:#111827;font-size:20px;margin:0 0 8px;">${data.statusMessage}</h2>
+          <p style="color:#6b7280;font-size:14px;margin:0 0 8px;">Order #${data.orderId.slice(-8).toUpperCase()}</p>
+          <p style="color:#6b7280;font-size:14px;margin:0 0 24px;">Status: <strong>${data.newStatus}</strong></p>
+          <a href="${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/profile"
+             style="display:inline-block;padding:12px 32px;background:#587284;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">
+            View Order Details
+          </a>
+        </div>
+        <div style="background:#111827;padding:24px 32px;text-align:center;">
+          <p style="color:rgba(255,255,255,0.5);font-size:11px;margin:0;letter-spacing:1px;">GOLDEN GRACE</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
 export async function POST(request: Request) {
   try {
     const data: OrderEmailData = await request.json();
@@ -167,11 +210,14 @@ export async function POST(request: Request) {
     }
 
     const resend = getResend();
+    const subject = data.statusUpdate
+      ? `${data.statusMessage} - Order #${data.orderId.slice(-8).toUpperCase()}`
+      : `Order Confirmed #${data.orderId.slice(-8).toUpperCase()} - Golden Grace`;
     const { error } = await resend.emails.send({
       from: "Golden Grace <orders@goldengrace.com>",
       to: data.customerEmail,
-      subject: `Order Confirmed #${data.orderId.slice(-8).toUpperCase()} - Golden Grace`,
-      html: buildEmailHtml(data),
+      subject,
+      html: data.statusUpdate ? buildStatusUpdateHtml(data) : buildEmailHtml(data),
     });
 
     if (error) {

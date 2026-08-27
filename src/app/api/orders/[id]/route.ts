@@ -39,5 +39,38 @@ export async function PUT(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Send status update email (non-blocking)
+  if (data && data.user_email) {
+    try {
+      const statusLabels: Record<string, string> = {
+        confirmed: "Your order has been confirmed!",
+        processing: "Your order is being prepared.",
+        shipped: "Your order has been shipped!",
+        delivered: "Your order has been delivered!",
+        cancelled: "Your order has been cancelled.",
+        pending: "Your order is pending.",
+      };
+
+      const message = statusLabels[body.status.toLowerCase()] || `Your order status has been updated to ${body.status}.`;
+
+      fetch(`${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/send-order-confirmation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: data.id,
+          customerName: data.user_name || "Customer",
+          customerEmail: data.user_email,
+          items: data.items || [],
+          total: data.total,
+          statusUpdate: true,
+          statusMessage: message,
+          newStatus: body.status,
+        }),
+      }).catch(() => {});
+    } catch {
+      // Email failed, but order status was still updated
+    }
+  }
+
   return NextResponse.json(data);
 }

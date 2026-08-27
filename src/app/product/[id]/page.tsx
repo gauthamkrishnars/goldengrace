@@ -46,6 +46,13 @@ export default function ProductDetailPage() {
     ? allProducts.filter((p) => p.categorySlug === product.categorySlug && p.id !== product.id).slice(0, 4)
     : [];
 
+  // Update page title for SEO
+  useEffect(() => {
+    if (product) {
+      document.title = `${product.name} | Golden Grace`;
+    }
+  }, [product]);
+
   const inWishlist = product ? isInWishlist(product.id) : false;
 
   const handleAddToCart = () => {
@@ -87,8 +94,31 @@ export default function ProductDetailPage() {
     );
   }
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    description: product.description,
+    image: product.images,
+    sku: product.sku,
+    brand: { "@type": "Brand", name: "Golden Grace" },
+    offers: {
+      "@type": "Offer",
+      priceCurrency: "INR",
+      price: product.price,
+      availability: product.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      seller: { "@type": "Organization", name: "Golden Grace" },
+    },
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: product.rating,
+      reviewCount: product.reviewCount,
+    },
+  };
+
   return (
     <div className="min-h-screen bg-white">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <GlobalNav />
 
       <div className="max-w-7xl mx-auto px-4 py-3">
