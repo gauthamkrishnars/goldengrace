@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -37,6 +37,8 @@ const slides = [
 
 export default function GoldMineBanner() {
   const [current, setCurrent] = useState(0);
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
 
   const next = useCallback(() => {
     setCurrent((prev) => (prev + 1) % slides.length);
@@ -52,11 +54,35 @@ export default function GoldMineBanner() {
     return () => clearInterval(timer);
   }, [next]);
 
+  // Touch/swipe handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    const diff = touchStartX.current - touchEndX.current;
+    const threshold = 50; // minimum swipe distance
+    if (diff > threshold) {
+      next(); // swipe left → next slide
+    } else if (diff < -threshold) {
+      prev(); // swipe right → previous slide
+    }
+  };
+
   const slide = slides[current];
 
   return (
     <section className="w-full max-w-7xl mx-auto px-4 py-8">
-      <div className="relative rounded-2xl overflow-hidden bg-gray-900 group">
+      <div
+        className="relative rounded-2xl overflow-hidden bg-gray-900 group"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         {/* Slides */}
         <div className="relative w-full" style={{ aspectRatio: "16/7" }}>
           {slides.map((s, i) => (

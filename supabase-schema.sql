@@ -147,7 +147,33 @@ CREATE POLICY "Users can delete own cart"
   USING (auth.uid() = user_id);
 
 -- ============================================================
--- 7. INDEXES
+-- 7. WISHLIST ITEMS TABLE (persistent wishlist per user)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS wishlist_items (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  product_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, product_id)
+);
+
+-- RLS policies for wishlist_items
+ALTER TABLE wishlist_items ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own wishlist"
+  ON wishlist_items FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own wishlist"
+  ON wishlist_items FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own wishlist"
+  ON wishlist_items FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- ============================================================
+-- 8. INDEXES
 -- ============================================================
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_slug);
 CREATE INDEX IF NOT EXISTS idx_products_in_stock ON products(in_stock);
