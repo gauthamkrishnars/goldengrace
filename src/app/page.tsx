@@ -1,3 +1,7 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import GlobalNav from "@/components/GlobalNav";
 import HeroSection from "@/components/HeroSection";
 import SearchInput from "@/components/SearchInput";
@@ -7,12 +11,20 @@ import Trendspotting from "@/components/Trendspotting";
 import GoldMineBanner from "@/components/GoldMineBanner";
 import FloatingButton from "@/components/FloatingButton";
 import Footer from "@/components/Footer";
-import Link from "next/link";
-import { products } from "@/data/products";
 import ProductCard from "@/components/product/ProductCard";
+import { Product } from "@/data/types";
 
 export default function Home() {
-  const bestsellers = products.filter((p) => p.isBestseller).slice(0, 4);
+  const [bestsellers, setBestsellers] = useState<Product[]>([]);
+
+  useEffect(() => {
+    fetch("/api/products")
+      .then((res) => res.json())
+      .then((data: Product[]) => {
+        setBestsellers(data.filter((p) => p.isBestseller).slice(0, 4));
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
