@@ -34,10 +34,11 @@ export const metadata: Metadata = {
     description: "BIS hallmarked diamonds, gold, and gemstone jewellery.",
     images: [
       {
-        url: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=1200&h=630&fit=crop&q=80",
+        url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://goldengrace.com"}/opengraph-image`,
         width: 1200,
         height: 630,
-        alt: "Golden Grace Fine Jewellery",
+        alt: "Golden Grace - Premium Fine Jewellery",
+        type: "image/png",
       },
     ],
   },
@@ -45,7 +46,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Golden Grace - Premium Fine Jewellery",
     description: "BIS hallmarked diamonds, gold, and gemstone jewellery.",
-    images: ["https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=1200&h=630&fit=crop&q=80"],
+    images: [`${process.env.NEXT_PUBLIC_SITE_URL || "https://goldengrace.com"}/opengraph-image`],
   },
   robots: {
     index: true,

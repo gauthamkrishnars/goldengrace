@@ -1,7 +1,5 @@
 import { ImageResponse } from "next/og";
 
-export const runtime = "edge";
-
 export const alt = "Golden Grace - Premium Fine Jewellery";
 export const size = {
   width: 1200,
@@ -21,7 +19,6 @@ export default async function Image() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          fontFamily: "serif",
           position: "relative",
           overflow: "hidden",
         }}
@@ -59,6 +56,7 @@ export default async function Image() {
             letterSpacing: 8,
             textAlign: "center",
             zIndex: 1,
+            fontFamily: "serif",
           }}
         >
           GOLDEN GRACE
@@ -97,18 +95,11 @@ export default async function Image() {
             zIndex: 1,
           }}
         >
-          {["BIS Hallmarked", "Diamonds & Gold", "Free Shipping"].map((feature) => (
-            <div
-              key={feature}
-              style={{
-                fontSize: 16,
-                color: "rgba(255,255,255,0.5)",
-                letterSpacing: 2,
-              }}
-            >
-              {feature}
-            </div>
-          ))}
+          <div style={{ fontSize: 16, color: "rgba(255,255,255,0.5)", letterSpacing: 2 }}>BIS Hallmarked</div>
+          <div style={{ fontSize: 16, color: "rgba(255,255,255,0.5)", letterSpacing: 2 }}>◆</div>
+          <div style={{ fontSize: 16, color: "rgba(255,255,255,0.5)", letterSpacing: 2 }}>Diamonds &amp; Gold</div>
+          <div style={{ fontSize: 16, color: "rgba(255,255,255,0.5)", letterSpacing: 2 }}>◆</div>
+          <div style={{ fontSize: 16, color: "rgba(255,255,255,0.5)", letterSpacing: 2 }}>Free Shipping</div>
         </div>
       </div>
     ),
