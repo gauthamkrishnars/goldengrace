@@ -153,7 +153,7 @@ export default function ProductDetailPage() {
 
             <div className="bg-accent-pink rounded-xl p-3">
               <p className="text-xs text-accent-rose-gold font-semibold">
-                Gold Mine 10+1: Pay in 10 installments of {formatPrice(Math.ceil(product.price / 10))}/month
+                🚚 Free shipping on all orders • 💎 BIS Hallmarked • 🔄 Lifetime exchange
               </p>
             </div>
 
