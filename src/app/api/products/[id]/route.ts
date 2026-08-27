@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { supabase, dbToProduct, productToDB } from "@/lib/supabase";
+import { getSupabaseServer } from "@/lib/supabase-server";
+import { dbToProduct, productToDB } from "@/lib/supabase";
+
+const supabase = getSupabaseServer();
 
 export const dynamic = "force-dynamic";
 

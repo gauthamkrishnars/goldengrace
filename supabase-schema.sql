@@ -113,6 +113,25 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_column THEN NULL;
 END $$;
 
+-- RLS policies for orders
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone can insert orders" ON orders;
+CREATE POLICY "Anyone can insert orders"
+  ON orders FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Users can view own orders by email" ON orders;
+CREATE POLICY "Users can view own orders by email"
+  ON orders FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Anyone can update orders" ON orders;
+CREATE POLICY "Anyone can update orders"
+  ON orders FOR UPDATE USING (true);
+
+DROP POLICY IF EXISTS "Anyone can delete orders" ON orders;
+CREATE POLICY "Anyone can delete orders"
+  ON orders FOR DELETE USING (true);
+
 -- ============================================================
 -- 4. CART ITEMS TABLE
 -- ============================================================

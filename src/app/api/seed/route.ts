@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { supabase, productToDB } from "@/lib/supabase";
+import { getSupabaseServer } from "@/lib/supabase-server";
+import { productToDB } from "@/lib/supabase";
+
+const supabase = getSupabaseServer();
 import { products } from "@/data/products";
 
 export async function POST() {
