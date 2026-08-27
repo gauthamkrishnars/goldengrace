@@ -132,7 +132,7 @@ export default function OrdersPage() {
                               }`}>
                                 <Icon className="h-4 w-4" />
                               </div>
-                              <p className={`text-[10px] mt-1.5 text-center font-medium ${
+                              <p className={`text-[10px] mt-1.5 text-center font-medium hidden sm:block ${
                                 isComplete ? "text-gray-800" : "text-gray-400"
                               }`}>
                                 {step.label}

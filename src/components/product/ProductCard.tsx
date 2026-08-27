@@ -41,7 +41,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           </div>
           {/* Wishlist */}
           <button
-            className="absolute top-2 right-2 p-1.5 bg-white/80 rounded-full hover:bg-white transition-colors opacity-0 group-hover:opacity-100"
+            className="absolute top-2 right-2 p-1.5 bg-white/80 rounded-full hover:bg-white transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
             aria-label="Add to wishlist"
             onClick={(e) => e.preventDefault()}
           >

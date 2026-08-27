@@ -25,19 +25,19 @@ export default function GlobalNav() {
   return (
     <>
       <header className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
-        <div className="flex items-center justify-between px-4 py-3 max-w-7xl mx-auto">
-          {/* Left: Hamburger + Home */}
-          <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between px-3 md:px-4 py-2.5 md:py-3 max-w-7xl mx-auto">
+          {/* Left: Hamburger + Home (Home hidden on mobile) */}
+          <div className="flex items-center gap-0.5 md:gap-1 shrink-0">
             <button
-              className="p-2 -ml-2 rounded-md hover:bg-gray-50 transition-colors"
+              className="p-1.5 md:p-2 -ml-1 md:-ml-2 rounded-md hover:bg-gray-50 transition-colors"
               aria-label="Open menu"
               onClick={() => setMobileMenuOpen(true)}
             >
-              <Menu className="h-6 w-6 text-gray-700" strokeWidth={1.5} />
+              <Menu className="h-5 md:h-6 w-5 md:w-6 text-gray-700" strokeWidth={1.5} />
             </button>
             <Link
               href="/"
-              className="p-2 rounded-md hover:bg-gray-50 transition-colors"
+              className="p-1.5 md:p-2 rounded-md hover:bg-gray-50 transition-colors hidden md:block"
               aria-label="Home"
             >
               <Home className="h-5 w-5 text-gray-600" strokeWidth={1.5} />
@@ -45,24 +45,24 @@ export default function GlobalNav() {
           </div>
 
           {/* Center: Brand Logo */}
-          <Link href="/" className="absolute left-1/2 -translate-x-1/2">
-            <h1 className="font-serif text-xl md:text-2xl font-bold tracking-wide text-gray-800">
+          <Link href="/" className="flex-1 flex justify-center">
+            <h1 className="font-serif text-base md:text-2xl font-bold tracking-wide text-gray-800 truncate">
               GOLDEN GRACE
             </h1>
           </Link>
 
           {/* Right Icons */}
-          <div className="flex items-center gap-0.5">
+          <div className="flex items-center gap-0 shrink-0">
             <Link
               href="/search"
-              className="p-2 rounded-md hover:bg-gray-50 transition-colors"
+              className="p-1.5 md:p-2 rounded-md hover:bg-gray-50 transition-colors"
               aria-label="Search"
             >
               <Search className="h-5 w-5 text-gray-600" strokeWidth={1.5} />
             </Link>
             <Link
               href="/wishlist"
-              className="relative p-2 rounded-md hover:bg-gray-50 transition-colors"
+              className="relative p-1.5 md:p-2 rounded-md hover:bg-gray-50 transition-colors hidden sm:block"
               aria-label="Wishlist"
             >
               <Heart className="h-5 w-5 text-gray-600" strokeWidth={1.5} />
@@ -74,14 +74,14 @@ export default function GlobalNav() {
             </Link>
             <Link
               href="/profile"
-              className="p-2 rounded-md hover:bg-gray-50 transition-colors"
+              className="p-1.5 md:p-2 rounded-md hover:bg-gray-50 transition-colors"
               aria-label="My Account"
             >
               <User className="h-5 w-5 text-gray-600" strokeWidth={1.5} />
             </Link>
             <Link
               href="/cart"
-              className="relative p-2 rounded-md hover:bg-gray-50 transition-colors"
+              className="relative p-1.5 md:p-2 rounded-md hover:bg-gray-50 transition-colors"
               aria-label="Shopping cart"
             >
               <ShoppingCart className="h-5 w-5 text-gray-600" strokeWidth={1.5} />

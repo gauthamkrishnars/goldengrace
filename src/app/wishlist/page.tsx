@@ -48,7 +48,7 @@ export default function WishlistPage() {
               <div key={product.id} className="relative group">
                 <ProductCard product={product} />
                 {/* Wishlist Actions Overlay */}
-                <div className="absolute top-2 right-2 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                <div className="absolute top-2 right-2 flex flex-col gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity z-10">
                   <button
                     onClick={() => handleMoveToCart(product.id)}
                     className="p-2 bg-brand text-white rounded-full shadow-md hover:bg-brand/90 transition-colors"

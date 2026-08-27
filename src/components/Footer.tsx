@@ -85,7 +85,7 @@ export default function Footer() {
             <span>•</span>
             <span>IGI Certified</span>
             <span>•</span>
-            <span>BIS Hallmarked</span>
+            <span>Secure Payments</span>
           </div>
         </div>
       </div>

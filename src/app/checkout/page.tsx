@@ -406,7 +406,7 @@ export default function CheckoutPage() {
                       placeholder="Street, Landmark"
                       className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20" />
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
                       <input type="text" value={address.city} onChange={(e) => setAddress({ ...address, city: e.target.value })}
