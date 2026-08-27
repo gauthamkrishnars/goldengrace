@@ -84,6 +84,22 @@ CREATE TABLE IF NOT EXISTS products (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- RLS policies for products (open: everyone can browse, admin manages via API)
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone can view products" ON products;
+CREATE POLICY "Anyone can view products"
+  ON products FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Anyone can insert products" ON products;
+CREATE POLICY "Anyone can insert products"
+  ON products FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Anyone can update products" ON products;
+CREATE POLICY "Anyone can update products"
+  ON products FOR UPDATE USING (true);
+DROP POLICY IF EXISTS "Anyone can delete products" ON products;
+CREATE POLICY "Anyone can delete products"
+  ON products FOR DELETE USING (true);
+
 -- ============================================================
 -- 3. ORDERS TABLE
 -- ============================================================

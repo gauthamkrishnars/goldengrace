@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServer } from "@/lib/supabase-server";
-import { dbToProduct } from "@/lib/supabase";
+import { dbToProduct, productToDB } from "@/lib/supabase";
 
 const supabase = getSupabaseServer();
 import { products as mockProducts } from "@/data/products";
@@ -34,17 +34,20 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    const dbData = productToDB(body);
 
     const { data, error } = await supabase
       .from("products")
-      .upsert(body)
+      .upsert(dbData)
       .select()
       .single();
 
     if (error) throw error;
 
     return NextResponse.json(dbToProduct(data));
-  } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+  } catch (err: unknown) {
+    console.error("Product POST error:", err);
+    const message = err instanceof Error ? err.message : JSON.stringify(err);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
