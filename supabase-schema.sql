@@ -105,6 +105,14 @@ CREATE TABLE IF NOT EXISTS orders (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- If orders table already existed without user_id, add it
+DO $$ BEGIN
+  ALTER TABLE orders ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+  ALTER TABLE orders ADD COLUMN IF NOT EXISTS subtotal INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping INTEGER DEFAULT 0;
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+
 -- ============================================================
 -- 4. CART ITEMS TABLE
 -- ============================================================
