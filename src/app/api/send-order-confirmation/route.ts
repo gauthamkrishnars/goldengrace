@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
-import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResend() {
+  const { Resend } = require("resend");
+  return new Resend(process.env.RESEND_API_KEY);
+}
 
 interface OrderEmailData {
   orderId: string;
@@ -164,6 +166,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ skipped: true, reason: "No API key" });
     }
 
+    const resend = getResend();
     const { error } = await resend.emails.send({
       from: "Golden Grace <orders@goldengrace.com>",
       to: data.customerEmail,
