@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Eye, EyeOff, Check, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Eye, EyeOff, Check, X, Loader2, AlertCircle, CheckCircle } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 interface FormData {
   name: string;
@@ -13,16 +15,23 @@ interface FormData {
 }
 
 export default function SignupPage() {
+  const router = useRouter();
+  const { signup, isLoggedIn, loading } = useAuth();
   const [form, setForm] = useState<FormData>({
-    name: "",
-    email: "",
-    phone: "",
-    password: "",
-    confirmPassword: "",
+    name: "", email: "", phone: "", password: "", confirmPassword: "",
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState<Partial<FormData>>({});
+  const [errors, setErrors] = useState<Partial<FormData> & { general?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    if (!loading && isLoggedIn) {
+      router.push("/profile");
+    }
+  }, [loading, isLoggedIn, router]);
+
+  if (loading || isLoggedIn) return null;
 
   const passwordChecks = {
     length: form.password.length >= 8,
@@ -50,20 +59,54 @@ export default function SignupPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
     setIsSubmitting(true);
-    setTimeout(() => {
+    setErrors({});
+
+    const result = await signup(form.name, form.email, form.phone, form.password);
+    if (result.error) {
+      setErrors({ general: result.error.includes("already registered") ? "An account with this email already exists" : result.error });
       setIsSubmitting(false);
-      alert("Signup functionality would go here (demo only)");
-    }, 1500);
+    } else {
+      setSuccess(true);
+      setIsSubmitting(false);
+    }
   };
+
+  // Success state
+  if (success) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="w-full max-w-md text-center">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-800 mb-2">Account Created!</h2>
+            <p className="text-sm text-gray-500 mb-2">
+              We&apos;ve sent a confirmation email to <strong>{form.email}</strong>
+            </p>
+            <p className="text-xs text-gray-400 mb-6">
+              Please check your inbox and click the confirmation link to activate your account.
+              If you don&apos;t see it, check your spam folder.
+            </p>
+            <Link
+              href="/auth/login"
+              className="inline-block w-full py-3 bg-brand text-white text-sm font-semibold rounded-lg hover:bg-brand/90 transition-colors"
+            >
+              Go to Sign In
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
-        {/* Brand Header */}
         <div className="text-center mb-8">
           <Link href="/" className="font-serif text-3xl font-bold text-gray-800">
             GOLDEN GRACE
@@ -71,12 +114,17 @@ export default function SignupPage() {
           <p className="text-sm text-gray-500 mt-2">Create your account</p>
         </div>
 
-        {/* Signup Card */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
           <h2 className="text-xl font-bold text-gray-800 mb-6">Sign Up</h2>
 
+          {errors.general && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-lg flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
+              <p className="text-xs text-red-600">{errors.general}</p>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
               <input
@@ -91,7 +139,6 @@ export default function SignupPage() {
               {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
             </div>
 
-            {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
               <input
@@ -106,7 +153,6 @@ export default function SignupPage() {
               {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
             </div>
 
-            {/* Phone */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
               <input
@@ -121,7 +167,6 @@ export default function SignupPage() {
               {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
             </div>
 
-            {/* Password */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
               <div className="relative">
@@ -144,7 +189,6 @@ export default function SignupPage() {
               </div>
               {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password}</p>}
 
-              {/* Password Strength */}
               {form.password && (
                 <div className="mt-2 space-y-1">
                   {[
@@ -168,7 +212,6 @@ export default function SignupPage() {
               )}
             </div>
 
-            {/* Confirm Password */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
               <input
@@ -184,20 +227,21 @@ export default function SignupPage() {
             </div>
 
             <label className="flex items-start gap-2 text-sm text-gray-600">
-              <input type="checkbox" className="rounded border-gray-300 mt-0.5" />
+              <input type="checkbox" className="rounded border-gray-300 mt-0.5" required />
               <span>
                 I agree to the{" "}
-                <Link href="/" className="text-brand font-medium hover:underline">Terms of Service</Link>{" "}
+                <Link href="/policies/terms" className="text-brand font-medium hover:underline">Terms of Service</Link>{" "}
                 and{" "}
-                <Link href="/" className="text-brand font-medium hover:underline">Privacy Policy</Link>
+                <Link href="/policies/privacy" className="text-brand font-medium hover:underline">Privacy Policy</Link>
               </span>
             </label>
 
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-3 bg-brand text-white text-sm font-semibold rounded-lg hover:bg-brand/90 transition-colors disabled:opacity-50"
+              className="w-full py-3 bg-brand text-white text-sm font-semibold rounded-lg hover:bg-brand/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
+              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
               {isSubmitting ? "Creating Account..." : "Create Account"}
             </button>
           </form>
