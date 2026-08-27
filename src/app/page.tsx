@@ -9,7 +9,6 @@ import CategoryGrid from "@/components/CategoryGrid";
 import CuratedCollections from "@/components/CuratedCollections";
 import Trendspotting from "@/components/Trendspotting";
 import GoldMineBanner from "@/components/GoldMineBanner";
-import FloatingButton from "@/components/FloatingButton";
 import Footer from "@/components/Footer";
 import ProductCard from "@/components/product/ProductCard";
 import { Product } from "@/data/types";
@@ -56,7 +55,6 @@ export default function Home() {
       </main>
 
       <Footer />
-      <FloatingButton />
     </div>
   );
 }
