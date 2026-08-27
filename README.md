@@ -1,8 +1,9 @@
 # Golden Grace — Premium Fine Jewellery E-Commerce
 
-A full-featured e-commerce website for fine jewellery built with Next.js, Supabase, and Razorpay.
+A full-featured, production-ready e-commerce website for fine jewellery. Built with Next.js 16, Supabase, and Razorpay.
 
-**Live URL:** https://goldengrace.vercel.app
+**Live:** [goldengrace.vercel.app](https://goldengrace.vercel.app)
+**Admin Panel:** [/admin](https://goldengrace.vercel.app/admin) — password: `goldengrace`
 
 ---
 
@@ -11,14 +12,72 @@ A full-featured e-commerce website for fine jewellery built with Next.js, Supaba
 | Layer | Technology |
 |-------|-----------|
 | Framework | Next.js 16 (App Router, Turbopack) |
+| Language | TypeScript |
 | Database | Supabase (PostgreSQL) |
-| Auth | Supabase Auth (email/password) |
-| Payments | Razorpay (UPI, Cards, Net Banking) + COD |
-| Email | Resend |
-| Hosting | Vercel |
+| Auth | Supabase Auth (email/password, forgot password) |
+| Payments | Razorpay (UPI, Cards, Net Banking) + Cash on Delivery |
+| Email | Resend (order confirmations + status updates) |
+| Hosting | Vercel (auto-deploy from main) |
 | Styling | Tailwind CSS 4 |
 | Icons | Lucide React |
 | Fonts | Inter + Playfair Display (Google Fonts) |
+
+---
+
+## Features
+
+### Shopping Experience
+- **55 products** across 6 categories (Rings, Pendants, Earrings, Necklaces, Bracelets, Bangles)
+- Full-text **product search** with tag-based filtering
+- **Category browsing** with sort (Featured, Price, Newest, Rating) and metal type filter
+- **Product detail** pages with image gallery, reviews, and related items
+- Auto-sliding **carousel** with touch swipe support
+
+### Cart & Wishlist
+- **Persistent cart** — saves to Supabase when logged in, localStorage when guest
+- **Persistent wishlist** — same behavior as cart
+- **Auto-merge** — local items merge into Supabase on login
+- **Race condition safe** — all Supabase syncs happen after local state is committed
+
+### Checkout & Orders
+- **Multi-step checkout:** Address → Payment → Confirmation
+- **Address validation** — all fields validated before proceeding
+- **Saved addresses** — pre-fills checkout with your default address
+- **Payment:** Razorpay (real) or Cash on Delivery
+- **Order IDs** — unique even under concurrent load (random suffix)
+- **Order tracking** — 5-step timeline with progress bar
+- **Confirmation email** — sent automatically via Resend
+- **Status update emails** — customer gets emailed when admin changes status
+
+### User Account
+- **Signup** with password strength checker (8+ chars, uppercase, number, special)
+- **Login** with forgot password (Supabase email reset)
+- **Profile** — edit name and phone
+- **Address management** — add, edit, delete, set default
+- **Order history** — view all past orders with status
+
+### Admin Dashboard (`/admin`)
+- Password-protected (password: `goldengrace`)
+- **Dashboard stats** — total products, total orders, revenue, stock count
+- **Product CRUD** — create, edit, delete products with image upload to Supabase Storage
+- **Order management** — view all orders, change status (pending → confirmed → processing → shipped → delivered)
+- **One-click seed** — insert all 55 products into Supabase
+- **Status change triggers email** — customer notified automatically
+
+### SEO & Social
+- **Dynamic sitemap.xml** — all products, categories, and pages
+- **robots.txt** — blocks /admin and /api
+- **Open Graph + Twitter cards** — branded OG image for WhatsApp, Instagram, Facebook, LinkedIn
+- **JSON-LD structured data** — product pages show rich snippets in Google
+- **Dynamic page titles** — per-product titles
+- **Custom 404 page** — branded with navigation
+
+### Mobile & Responsive
+- Fully responsive on all screen sizes
+- Hamburger menu drawer on mobile
+- Touch swipe on carousel
+- Responsive grids (2 cols mobile → 4 cols desktop)
+- Always-visible action buttons on mobile (no hover-only)
 
 ---
 
@@ -27,204 +86,206 @@ A full-featured e-commerce website for fine jewellery built with Next.js, Supaba
 ```
 src/
 ├── app/
-│   ├── layout.tsx              # Root layout with Auth/Cart/Wishlist providers
-│   ├── page.tsx                # Homepage (hero, categories, bestsellers, carousel)
+│   ├── layout.tsx              # Root layout, providers, SEO metadata
+│   ├── page.tsx                # Homepage
 │   ├── loading.tsx             # Global loading spinner
 │   ├── not-found.tsx           # Custom 404 page
-│   ├── opengraph-image.tsx     # OG image for social media sharing
+│   ├── opengraph-image.tsx     # OG image for social sharing
 │   ├── robots.ts               # SEO: robots.txt
-│   ├── sitemap.ts              # SEO: dynamic sitemap.xml
+│   ├── sitemap.ts              # SEO: sitemap.xml
 │   ├── auth/
-│   │   ├── login/page.tsx      # Login with forgot password modal
-│   │   └── signup/page.tsx     # Signup with password strength checker
-│   ├── profile/page.tsx        # User profile, orders, addresses, settings
+│   │   ├── login/page.tsx      # Login with forgot password
+│   │   └── signup/page.tsx     # Signup with password strength
+│   ├── profile/page.tsx        # Profile, orders, addresses, settings
 │   ├── cart/page.tsx           # Shopping cart
-│   ├── checkout/page.tsx       # Multi-step checkout (address → payment → confirm)
+│   ├── checkout/page.tsx       # Multi-step checkout
 │   ├── orders/page.tsx         # Order tracking with timeline
 │   ├── wishlist/page.tsx       # Saved items
-│   ├── search/page.tsx         # Product search with filters
-│   ├── category/[slug]/page.tsx # Category browsing with sort/filter
-│   ├── product/[id]/page.tsx   # Product detail with reviews, related items
-│   ├── admin/page.tsx          # Admin dashboard (password protected)
-│   ├── policies/               # Legal pages (terms, privacy, shipping, returns)
+│   ├── search/page.tsx         # Product search
+│   ├── category/[slug]/page.tsx # Category browsing
+│   ├── product/[id]/page.tsx   # Product detail + reviews
+│   ├── admin/page.tsx          # Admin dashboard
+│   ├── policies/               # Terms, privacy, shipping, returns
 │   └── api/
 │       ├── orders/route.ts     # Create/get orders
-│       ├── orders/[id]/route.ts # Update order status + send email
+│       ├── orders/[id]/route.ts # Update status + send email
 │       ├── products/route.ts   # Get/create products
 │       ├── products/[id]/route.ts # Update/delete products
 │       ├── upload/route.ts     # Image upload to Supabase Storage
-│       ├── seed/route.ts       # Seed 55 products to database
+│       ├── seed/route.ts       # Seed 55 products
 │       ├── create-order/route.ts # Razorpay order creation
-│       └── send-order-confirmation/route.ts # Order confirmation emails
+│       └── send-order-confirmation/route.ts # Confirmation + status emails
 ├── components/
 │   ├── GlobalNav.tsx           # Navigation with mobile drawer
-│   ├── Footer.tsx              # Site footer with links
-│   ├── HeroSection.tsx         # Homepage hero image
-│   ├── CategoryGrid.tsx        # Category browsing cards
+│   ├── Footer.tsx              # Site footer
+│   ├── HeroSection.tsx         # Hero image
+│   ├── CategoryGrid.tsx        # Category cards
 │   ├── CuratedCollections.tsx  # Collection highlights
 │   ├── Trendspotting.tsx       # Trending items
-│   ├── GoldMineBanner.tsx      # Auto-sliding carousel with swipe
-│   ├── FloatingButton.tsx      # Removed (was floating chat bubble)
-│   ├── SearchInput.tsx         # Homepage search bar
-│   ├── product/ProductCard.tsx # Product card component
-│   └── reviews/ProductReviews.tsx # Product reviews component
+│   ├── GoldMineBanner.tsx      # Auto-sliding carousel
+│   ├── SearchInput.tsx         # Search bar (navigates to /search)
+│   ├── product/ProductCard.tsx # Product card
+│   └── reviews/ProductReviews.tsx # Reviews component
 ├── context/
-│   ├── AuthContext.tsx          # Auth state, login/signup/logout, profile, orders
-│   ├── CartContext.tsx          # Cart with Supabase persistence + localStorage fallback
-│   └── WishlistContext.tsx      # Wishlist with Supabase persistence + localStorage fallback
+│   ├── AuthContext.tsx          # Auth, profile, orders
+│   ├── CartContext.tsx          # Cart with Supabase + localStorage
+│   └── WishlistContext.tsx      # Wishlist with Supabase + localStorage
 ├── data/
-│   ├── products.ts             # 55 products across 6 categories + helpers
+│   ├── products.ts             # 55 products + helpers
 │   └── types.ts                # TypeScript interfaces
 └── lib/
-    ├── supabase.ts             # Client-side Supabase client + type helpers
-    ├── supabase-server.ts      # Server-side client with service role key
+    ├── supabase.ts             # Client-side Supabase + type helpers
+    ├── supabase-server.ts      # Server-side client (service role)
     ├── api.ts                  # API helpers
     └── utils.ts                # Utility functions
 ```
 
 ---
 
-## Supabase Tables
+## Database
+
+### Tables (6 total)
 
 | Table | Purpose | RLS |
 |-------|---------|-----|
-| `user_profiles` | User name, phone (linked to auth.users) | ✅ Users can only see/edit own |
-| `products` | Product catalog (55 items) | ❌ Public read |
-| `orders` | Customer orders | ✅ Open (insert/select/update/delete) |
-| `cart_items` | Persistent shopping cart per user | ✅ Users can only see/edit own |
-| `wishlist_items` | Persistent wishlist per user | ✅ Users can only see/edit own |
-| `addresses` | Saved shipping addresses per user | ✅ Users can only see/edit own |
+| `user_profiles` | User name, phone (auto-created on signup) | ✅ Users see/edit own only |
+| `products` | Product catalog (55 items) | ✅ Open (public browse + admin CRUD) |
+| `orders` | Customer orders | ✅ Open (anyone can insert/select/update/delete) |
+| `cart_items` | Persistent cart per user | ✅ Users see/edit own only |
+| `wishlist_items` | Persistent wishlist per user | ✅ Users see/edit own only |
+| `addresses` | Saved shipping addresses per user | ✅ Users see/edit/delete own only |
 
-**Storage bucket:** `product-images` (public read, authenticated upload/delete)
+### Storage
+- **Bucket:** `product-images` (public read, authenticated upload/delete)
+
+### Key Schema Details
+- **Trigger:** `handle_new_user()` auto-creates a `user_profiles` row on signup
+- The trigger has an `EXCEPTION` block so signup never fails even if the table is missing
+- All tables use `CREATE TABLE IF NOT EXISTS` — safe to run multiple times
 
 ---
 
-## Environment Variables
+## Setup
 
-### Required (Vercel)
+### 1. Environment Variables
 
+**Required:**
 ```
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key  # Critical! See below
+NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGci...
 NEXT_PUBLIC_SITE_URL=https://goldengrace.vercel.app
 ```
 
-### Optional
-
+**Optional:**
 ```
-RESEND_API_KEY=re_xxxxx          # For order confirmation emails
-NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_xxxxx  # For real Razorpay payments
-RAZORPAY_KEY_SECRET=xxxxx        # For real Razorpay payments
+RESEND_API_KEY=re_xxxxx              # Order confirmation emails
+NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_xxxxx # Real Razorpay payments
+RAZORPAY_KEY_SECRET=xxxxx            # Real Razorpay payments
 ```
 
-### How to get SUPABASE_SERVICE_ROLE_KEY
+### 2. Supabase Setup
 
-1. Go to Supabase Dashboard → your project → Settings (gear icon) → API
+1. Create a project at [supabase.com](https://supabase.com)
+2. Go to **SQL Editor** → paste the entire `supabase-schema.sql` → click **Run**
+3. Go to **Settings → API** → copy `service_role` key → add to Vercel
+4. Go to **Authentication → Providers → Email** → **turn OFF** "Confirm email" (for testing)
+
+### 3. Get the Service Role Key
+
+1. Supabase Dashboard → your project → **Settings** (gear icon) → **API**
 2. Copy the `service_role` key (starts with `eyJ...`)
-3. Add it to Vercel → Settings → Environment Variables
+3. Vercel → your project → **Settings** → **Environment Variables**
+4. Add `SUPABASE_SERVICE_ROLE_KEY` = the key
+5. **Redeploy**
 
-**⚠️ Without this key, orders won't save.** All API routes use the server-side client which needs this key to bypass RLS.
+**⚠️ Without this key:** API routes fall back to anon key, which hits RLS. Orders won't save. Admin can't create/edit/delete products.
 
----
-
-## Database Schema
-
-Run the full `supabase-schema.sql` in Supabase SQL Editor to create all tables. Key points:
-
-- **Trigger:** `handle_new_user()` auto-creates a `user_profiles` row on signup (wrapped in EXCEPTION block so signup never fails)
-- **RLS policies** on user_profiles, cart_items, wishlist_items, addresses
-- **Orders** has open RLS (anyone can insert/select/update/delete)
-- **Products** has no RLS (public read)
-- **Storage** policies for product-images bucket
-
----
-
-## Features
-
-### Customer-Facing
-- [x] Browse 55 products across 6 categories (Rings, Pendants, Earrings, Necklaces, Bracelets, Bangles)
-- [x] Product search with tag-based filtering
-- [x] Category pages with sort (Featured, Price, Newest, Rating) and metal type filter
-- [x] Product detail with image gallery, reviews, related items
-- [x] Shopping cart (persistent across sessions)
-- [x] Wishlist (persistent across sessions)
-- [x] Multi-step checkout with address validation
-- [x] Payment via Razorpay (UPI, Cards, Net Banking) or Cash on Delivery
-- [x] Order confirmation email (via Resend)
-- [x] Order tracking with 5-step timeline
-- [x] User profile with editable name/phone
-- [x] Address management (add, edit, delete, set default)
-- [x] Forgot password via Supabase email
-- [x] Mobile responsive with hamburger menu and swipe carousel
-
-### Admin
-- [x] Password-protected admin panel (`/admin`, password: `goldengrace`)
-- [x] Dashboard with stats (products, orders, revenue, stock)
-- [x] Product CRUD (create, edit, delete with image upload)
-- [x] Order management with status dropdown (pending → confirmed → processing → shipped → delivered)
-- [x] Status change sends email notification to customer
-- [x] Seed 55 products to Supabase with one click
-
-### SEO
-- [x] Dynamic sitemap.xml with all products and categories
-- [x] robots.txt (blocks /admin and /api)
-- [x] Open Graph + Twitter cards with branded OG image
-- [x] JSON-LD structured data on product pages
-- [x] Custom 404 page
-- [x] Global loading spinner
-
----
-
-## Key Fixes Applied (This Session)
-
-1. **Signup "Database error saving new user"** — Made trigger robust with EXCEPTION block, added try/catch to all Supabase operations
-2. **Orders not saving** — Created `supabase-server.ts` with service role key, updated all API routes to use it
-3. **Stale closure bugs** — Fixed AuthContext using `useRef` for `supabaseUser` and `user`
-4. **Render-time redirects** — Login/signup now use `useEffect` instead of calling `router.push` during render
-5. **Broken import path** — Fixed `@/@/data/products` → `@/data/products` in profile page
-6. **Cart/Wishlist silent failures** — Added try/catch to all Supabase operations with localStorage fallback
-7. **Checkout showing false success** — API now returns proper errors, checkout shows them
-8. **OG image not showing** — Used absolute URLs required by WhatsApp/Instagram
-9. **Build failure on Vercel** — Lazy-initialized Resend client (was failing at module load time)
-10. **Missing /orders page** — Created full order tracking page with timeline
-
----
-
-## Common Issues
-
-### Orders not saving
-→ Add `SUPABASE_SERVICE_ROLE_KEY` to Vercel env vars
-→ Run the orders RLS policies SQL (see schema file)
-
-### OG image not showing on WhatsApp
-→ Ensure `NEXT_PUBLIC_SITE_URL` is set to `https://goldengrace.vercel.app`
-→ Use Facebook Sharing Debugger to force re-fetch
-
-### Build failing on Vercel
-→ Check that `RESEND_API_KEY` is set (or the lazy init will handle it)
-→ Check Vercel build logs for the specific error
-
-### Signup fails with "Database error"
-→ Run the full `supabase-schema.sql` to create the `user_profiles` table and trigger
-
----
-
-## Running Locally
+### 4. Run Locally
 
 ```bash
 npm install
+cp .env.example .env.local    # Add your Supabase keys
 npm run dev
 ```
 
-Requires `.env.local` with Supabase credentials.
+Open [http://localhost:3000](http://localhost:3000)
 
----
-
-## Deployment
+### 5. Deploy
 
 Push to `main` branch → Vercel auto-deploys.
 
 ---
 
-*Last updated: August 27, 2026*
+## Testing Checklist
+
+### Before Demo
+- [ ] Run `supabase-schema.sql` in Supabase SQL Editor
+- [ ] Add `SUPABASE_SERVICE_ROLE_KEY` to Vercel
+- [ ] Turn OFF email confirmation in Supabase Auth settings
+- [ ] Backfill existing users' profiles (see SQL below)
+
+### Feature Flow
+1. **Browse** → Homepage shows carousel, bestsellers, categories
+2. **Search** → Type "diamond" to find products
+3. **Product** → Full details, image gallery, add to cart
+4. **Cart** → Persistent (saves across sessions)
+5. **Signup** → Real Supabase auth with password validation
+6. **Login** → Session persists, profile loads
+7. **Address** → Add/edit/delete saved addresses
+8. **Checkout** → Address validation → Razorpay/COD → Order placed
+9. **Order tracking** → 5-step timeline with progress bar
+10. **Admin** → Dashboard stats, product CRUD, order management
+11. **Mobile** → Fully responsive on all screen sizes
+
+---
+
+## Backfill SQL (Run Once)
+
+If users signed up before the trigger was created, run this to create their profiles:
+
+```sql
+INSERT INTO user_profiles (id, full_name, phone)
+SELECT 
+  au.id,
+  COALESCE(au.raw_user_meta_data->>'full_name', ''),
+  COALESCE(au.raw_user_meta_data->>'phone', '')
+FROM auth.users au
+LEFT JOIN user_profiles up ON au.id = up.id
+WHERE up.id IS NULL;
+```
+
+---
+
+## Stress Testing Notes
+
+The site is safe for concurrent users:
+- **Order IDs** use random suffixes — no collisions under concurrent load
+- **Cart/Wishlist sync** — all Supabase writes happen after local state is committed (no race conditions)
+- **Double-click protection** — checkout button disables during processing
+- **RLS** — each user can only see/edit their own cart, wishlist, and addresses
+
+---
+
+## Bug Fixes Applied
+
+| Fix | What was wrong |
+|-----|---------------|
+| Signup "Database error" | Trigger had no error handling, missing `user_profiles` table |
+| Orders not saving | API routes used anon key, hit RLS. Created server client with service role |
+| Cart/Wishlist silent failures | Added try/catch with localStorage fallback |
+| Checkout false success | API errors weren't returned to frontend |
+| OG image not showing | WhatsApp/Instagram need absolute URLs, not relative |
+| Build failure on Vercel | Resend client initialized at module load (before env vars available) |
+| Missing /orders page | Track Orders linked to non-existent page |
+| Mobile header overlap | Brand title used absolute positioning, overlapped with icons |
+| Product CRUD failing | POST route sent camelCase to snake_case DB without mapping |
+| Order ID collisions | Date.now() alone collides for concurrent users |
+| Cart/Wishlist race conditions | Async Supabase sync inside setState callback |
+| EMI/Exchange references | Removed all mentions (was dead feature) |
+
+---
+
+## License
+
+Private — Golden Grace / DevCore Studio
