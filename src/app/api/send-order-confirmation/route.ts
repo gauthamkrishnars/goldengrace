@@ -138,7 +138,7 @@ function buildEmailHtml(data: OrderEmailData): string {
 
           <!-- CTA -->
           <div style="text-align:center;margin-bottom:24px;">
-            <a href="${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/profile" 
+            <a href="https://goldengrace.vercel.app/profile" 
                style="display:inline-block;padding:12px 32px;background:#587284;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">
               Track Your Order
             </a>
@@ -181,7 +181,7 @@ function buildStatusUpdateHtml(data: OrderEmailData): string {
           <h2 style="color:#111827;font-size:20px;margin:0 0 8px;">${data.statusMessage}</h2>
           <p style="color:#6b7280;font-size:14px;margin:0 0 8px;">Order #${data.orderId.slice(-8).toUpperCase()}</p>
           <p style="color:#6b7280;font-size:14px;margin:0 0 24px;">Status: <strong>${data.newStatus}</strong></p>
-          <a href="${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/profile"
+          <a href="https://goldengrace.vercel.app/profile"
              style="display:inline-block;padding:12px 32px;background:#587284;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">
             View Order Details
           </a>

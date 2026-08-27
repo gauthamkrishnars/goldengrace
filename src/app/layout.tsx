@@ -28,13 +28,13 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_IN",
-    url: process.env.NEXT_PUBLIC_SITE_URL || "https://goldengrace.com",
+    url: "https://goldengrace.vercel.app",
     siteName: "Golden Grace",
     title: "Golden Grace - Premium Fine Jewellery",
     description: "BIS hallmarked diamonds, gold, and gemstone jewellery.",
     images: [
       {
-        url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://goldengrace.com"}/opengraph-image`,
+        url: "https://goldengrace.vercel.app/opengraph-image",
         width: 1200,
         height: 630,
         alt: "Golden Grace - Premium Fine Jewellery",
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Golden Grace - Premium Fine Jewellery",
     description: "BIS hallmarked diamonds, gold, and gemstone jewellery.",
-    images: [`${process.env.NEXT_PUBLIC_SITE_URL || "https://goldengrace.com"}/opengraph-image`],
+    images: ["https://goldengrace.vercel.app/opengraph-image"],
   },
   robots: {
     index: true,
@@ -59,7 +59,7 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://goldengrace.com"),
+  metadataBase: new URL("https://goldengrace.vercel.app"),
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
