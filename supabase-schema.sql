@@ -1,7 +1,56 @@
 -- Golden Grace E-Commerce Database Schema
 -- Run this in your Supabase SQL Editor
 
--- Products table
+-- ============================================================
+-- 1. ENABLE AUTH (run once)
+-- ============================================================
+-- Auth is enabled by default in Supabase projects.
+-- Users sign up/login via the Supabase Auth UI or JS client.
+
+-- ============================================================
+-- 2. USER PROFILES TABLE (extends Supabase auth.users)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS user_profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  full_name TEXT,
+  phone TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Auto-create profile row when a new user signs up
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO user_profiles (id, full_name)
+  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'full_name', ''));
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+-- RLS policies for user_profiles
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own profile"
+  ON user_profiles FOR SELECT
+  USING (auth.uid() = id);
+
+CREATE POLICY "Users can update own profile"
+  ON user_profiles FOR UPDATE
+  USING (auth.uid() = id);
+
+CREATE POLICY "Users can insert own profile"
+  ON user_profiles FOR INSERT
+  WITH CHECK (auth.uid() = id);
+
+-- ============================================================
+-- 3. PRODUCTS TABLE
+-- ============================================================
 CREATE TABLE IF NOT EXISTS products (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -29,15 +78,20 @@ CREATE TABLE IF NOT EXISTS products (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Orders table
+-- ============================================================
+-- 4. ORDERS TABLE
+-- ============================================================
 CREATE TABLE IF NOT EXISTS orders (
   id TEXT PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   user_email TEXT NOT NULL,
   user_name TEXT,
   user_phone TEXT,
   items JSONB NOT NULL DEFAULT '[]',
+  subtotal INTEGER NOT NULL DEFAULT 0,
+  shipping INTEGER DEFAULT 0,
   total INTEGER NOT NULL,
-  status TEXT DEFAULT 'Processing',
+  status TEXT DEFAULT 'Pending',
   shipping_address JSONB,
   payment_method TEXT DEFAULT 'razorpay',
   payment_id TEXT,
@@ -45,7 +99,9 @@ CREATE TABLE IF NOT EXISTS orders (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Storage bucket for product images
+-- ============================================================
+-- 5. STORAGE BUCKET
+-- ============================================================
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('product-images', 'product-images', true)
 ON CONFLICT (id) DO NOTHING;
@@ -58,9 +114,44 @@ CREATE POLICY "Authenticated Upload" ON storage.objects
 CREATE POLICY "Authenticated Delete" ON storage.objects
   FOR DELETE USING (bucket_id = 'product-images');
 
--- Indexes
+-- ============================================================
+-- 6. CART ITEMS TABLE (persistent cart per user)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS cart_items (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  product_id TEXT NOT NULL,
+  quantity INTEGER NOT NULL DEFAULT 1,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, product_id)
+);
+
+-- RLS policies for cart_items
+ALTER TABLE cart_items ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own cart"
+  ON cart_items FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own cart"
+  ON cart_items FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own cart"
+  ON cart_items FOR UPDATE
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own cart"
+  ON cart_items FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- ============================================================
+-- 7. INDEXES
+-- ============================================================
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_slug);
 CREATE INDEX IF NOT EXISTS idx_products_in_stock ON products(in_stock);
+CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_orders_user_email ON orders(user_email);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at DESC);
