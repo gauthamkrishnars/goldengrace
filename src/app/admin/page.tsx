@@ -11,13 +11,48 @@ import { categories, formatPrice } from "@/data/products";
 import { Product } from "@/data/types";
 
 type AdminTab = "dashboard" | "products" | "add-product";
-
 const ADMIN_PASSWORD = "goldengrace";
 
 export default function AdminPage() {
+  // Auth state (must be before any early return)
   const [authenticated, setAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [passwordError, setPasswordError] = useState(false);
+
+  // Admin state (all hooks must be declared unconditionally)
+  const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
+  const [productList, setProductList] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<"idle" | "uploading" | "success" | "error">("idle");
+  const [saving, setSaving] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+  const [seedStatus, setSeedStatus] = useState<"idle" | "success" | "error">("idle");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [form, setForm] = useState({
+    name: "", slug: "", category: "Rings", categorySlug: "rings",
+    price: "", originalPrice: "", description: "", shortDescription: "",
+    metal: "18K White Gold", metalWeight: "", stone: "", stoneWeight: "",
+    sku: "", tags: "", isNew: false, isBestseller: false, images: [] as string[],
+  });
+
+  // Load products when authenticated
+  useEffect(() => {
+    if (authenticated) fetchProducts();
+  }, [authenticated]);
+
+  const fetchProducts = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/products");
+      const data = await res.json();
+      setProductList(data);
+    } catch {
+      console.error("Failed to fetch products");
+    }
+    setLoading(false);
+  };
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,6 +65,124 @@ export default function AdminPage() {
     }
   };
 
+  const resetForm = () => {
+    setForm({
+      name: "", slug: "", category: "Rings", categorySlug: "rings",
+      price: "", originalPrice: "", description: "", shortDescription: "",
+      metal: "18K White Gold", metalWeight: "", stone: "", stoneWeight: "",
+      sku: "", tags: "", isNew: false, isBestseller: false, images: [],
+    });
+    setEditingProduct(null);
+  };
+
+  const handleImageUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploadStatus("uploading");
+    const uploadedUrls: string[] = [];
+    for (const file of Array.from(files)) {
+      const formData = new FormData();
+      formData.append("file", file);
+      try {
+        const res = await fetch("/api/upload", { method: "POST", body: formData });
+        const data = await res.json();
+        if (data.url) uploadedUrls.push(data.url);
+      } catch {
+        console.error("Upload failed for:", file.name);
+      }
+    }
+    if (uploadedUrls.length > 0) {
+      setForm((prev) => ({ ...prev, images: [...prev.images, ...uploadedUrls] }));
+      setUploadStatus("success");
+    } else {
+      setUploadStatus("error");
+    }
+    setTimeout(() => setUploadStatus("idle"), 3000);
+  }, []);
+
+  const removeImage = (index: number) => {
+    setForm((prev) => ({ ...prev, images: prev.images.filter((_, i) => i !== index) }));
+  };
+
+  const handleSaveProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    const price = parseInt(form.price) || 0;
+    const originalPrice = form.originalPrice ? parseInt(form.originalPrice) : undefined;
+    const discount = originalPrice ? Math.round(((originalPrice - price) / originalPrice) * 100) : undefined;
+    const productData = {
+      id: editingProduct?.id || `adm-${Date.now()}`,
+      name: form.name,
+      slug: form.slug || form.name.toLowerCase().replace(/\s+/g, "-"),
+      category: form.category, categorySlug: form.categorySlug,
+      price, originalPrice, discount,
+      description: form.description, shortDescription: form.shortDescription,
+      images: form.images.length > 0 ? form.images : ["https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=600&h=600&fit=crop&q=80"],
+      metal: form.metal, metalWeight: form.metalWeight,
+      stone: form.stone || undefined, stoneWeight: form.stoneWeight || undefined,
+      sku: form.sku || `ADM-${Date.now()}`,
+      rating: 4.5, reviewCount: 0, inStock: true,
+      isNew: form.isNew, isBestseller: form.isBestseller,
+      tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
+    };
+    try {
+      if (editingProduct) {
+        const res = await fetch(`/api/products/${editingProduct.id}`, {
+          method: "PUT", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(productData),
+        });
+        if (res.ok) {
+          const updated = await res.json();
+          setProductList((prev) => prev.map((p) => (p.id === editingProduct.id ? updated : p)));
+        }
+      } else {
+        const res = await fetch("/api/products", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(productData),
+        });
+        if (res.ok) {
+          const created = await res.json();
+          setProductList((prev) => [created, ...prev]);
+        }
+      }
+    } catch {
+      if (editingProduct) {
+        setProductList((prev) => prev.map((p) => (p.id === editingProduct.id ? productData as Product : p)));
+      } else {
+        setProductList((prev) => [productData as Product, ...prev]);
+      }
+    }
+    setSaving(false);
+    resetForm();
+    setActiveTab("products");
+  };
+
+  const handleEdit = (product: Product) => {
+    setEditingProduct(product);
+    setForm({
+      name: product.name, slug: product.slug,
+      category: product.category, categorySlug: product.categorySlug,
+      price: product.price.toString(), originalPrice: product.originalPrice?.toString() || "",
+      description: product.description, shortDescription: product.shortDescription,
+      metal: product.metal, metalWeight: product.metalWeight,
+      stone: product.stone || "", stoneWeight: product.stoneWeight || "",
+      sku: product.sku, tags: product.tags.join(", "),
+      isNew: product.isNew || false, isBestseller: product.isBestseller || false,
+      images: product.images,
+    });
+    setActiveTab("add-product");
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this product?")) return;
+    try { await fetch(`/api/products/${id}`, { method: "DELETE" }); } catch {}
+    setProductList((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const avgPrice = productList.length > 0
+    ? productList.reduce((sum, p) => sum + p.price, 0) / productList.length : 0;
+
+  // ── Password Gate ──
   if (!authenticated) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
@@ -51,213 +204,30 @@ export default function AdminPage() {
             <form onSubmit={handlePasswordSubmit} className="space-y-4">
               <div>
                 <input
-                  type="password"
-                  value={passwordInput}
+                  type="password" value={passwordInput}
                   onChange={(e) => { setPasswordInput(e.target.value); setPasswordError(false); }}
                   placeholder="Enter admin password"
                   className={`w-full border rounded-lg px-4 py-3 text-sm text-center tracking-widest focus:outline-none focus:ring-2 transition-all ${
-                    passwordError
-                      ? "border-red-300 focus:ring-red-200 bg-red-50"
-                      : "border-gray-200 focus:ring-brand/20 focus:border-brand/40"
+                    passwordError ? "border-red-300 focus:ring-red-200 bg-red-50" : "border-gray-200 focus:ring-brand/20 focus:border-brand/40"
                   }`}
                   autoFocus
                 />
                 {passwordError && <p className="text-xs text-red-500 mt-2 text-center">Incorrect password. Try again.</p>}
               </div>
-              <button
-                type="submit"
-                className="w-full py-3 bg-brand text-white text-sm font-semibold rounded-lg hover:bg-brand/90 transition-colors"
-              >
+              <button type="submit" className="w-full py-3 bg-brand text-white text-sm font-semibold rounded-lg hover:bg-brand/90 transition-colors">
                 Access Admin Panel
               </button>
             </form>
           </div>
           <p className="text-center text-xs text-gray-400 mt-6">
-            <Link href="/" className="hover:text-brand">← Back to Store</Link>
+            <Link href="/" className="hover:text-brand">&larr; Back to Store</Link>
           </p>
         </div>
       </div>
     );
   }
 
-  const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
-  const [productList, setProductList] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [uploadStatus, setUploadStatus] = useState<"idle" | "uploading" | "success" | "error">("idle");
-  const [saving, setSaving] = useState(false);
-  const [seeding, setSeeding] = useState(false);
-  const [seedStatus, setSeedStatus] = useState<"idle" | "success" | "error">("idle");
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Load products from Supabase API
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const fetchProducts = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/products");
-      const data = await res.json();
-      setProductList(data);
-    } catch {
-      console.error("Failed to fetch products");
-    }
-    setLoading(false);
-  };
-
-  // Product form state
-  const [form, setForm] = useState({
-    name: "", slug: "", category: "Rings", categorySlug: "rings",
-    price: "", originalPrice: "", description: "", shortDescription: "",
-    metal: "18K White Gold", metalWeight: "", stone: "", stoneWeight: "",
-    sku: "", tags: "", isNew: false, isBestseller: false, images: [] as string[],
-  });
-
-  const resetForm = () => {
-    setForm({
-      name: "", slug: "", category: "Rings", categorySlug: "rings",
-      price: "", originalPrice: "", description: "", shortDescription: "",
-      metal: "18K White Gold", metalWeight: "", stone: "", stoneWeight: "",
-      sku: "", tags: "", isNew: false, isBestseller: false, images: [],
-    });
-    setEditingProduct(null);
-  };
-
-  // Upload images to Supabase Storage
-  const handleImageUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    setUploadStatus("uploading");
-    const uploadedUrls: string[] = [];
-
-    for (const file of Array.from(files)) {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      try {
-        const res = await fetch("/api/upload", { method: "POST", body: formData });
-        const data = await res.json();
-        if (data.url) uploadedUrls.push(data.url);
-      } catch {
-        console.error("Upload failed for:", file.name);
-      }
-    }
-
-    if (uploadedUrls.length > 0) {
-      setForm((prev) => ({ ...prev, images: [...prev.images, ...uploadedUrls] }));
-      setUploadStatus("success");
-    } else {
-      setUploadStatus("error");
-    }
-    setTimeout(() => setUploadStatus("idle"), 3000);
-  }, []);
-
-  const removeImage = (index: number) => {
-    setForm((prev) => ({ ...prev, images: prev.images.filter((_, i) => i !== index) }));
-  };
-
-  // Save product to Supabase
-  const handleSaveProduct = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-
-    const price = parseInt(form.price) || 0;
-    const originalPrice = form.originalPrice ? parseInt(form.originalPrice) : undefined;
-    const discount = originalPrice ? Math.round(((originalPrice - price) / originalPrice) * 100) : undefined;
-
-    const productData = {
-      id: editingProduct?.id || `adm-${Date.now()}`,
-      name: form.name,
-      slug: form.slug || form.name.toLowerCase().replace(/\s+/g, "-"),
-      category: form.category,
-      categorySlug: form.categorySlug,
-      price, originalPrice, discount,
-      description: form.description,
-      shortDescription: form.shortDescription,
-      images: form.images.length > 0 ? form.images : ["https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=600&h=600&fit=crop&q=80"],
-      metal: form.metal, metalWeight: form.metalWeight,
-      stone: form.stone || undefined, stoneWeight: form.stoneWeight || undefined,
-      sku: form.sku || `ADM-${Date.now()}`,
-      rating: 4.5, reviewCount: 0, inStock: true,
-      isNew: form.isNew, isBestseller: form.isBestseller,
-      tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
-    };
-
-    try {
-      if (editingProduct) {
-        // Update via API
-        const res = await fetch(`/api/products/${editingProduct.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(productData),
-        });
-        if (res.ok) {
-          const updated = await res.json();
-          setProductList((prev) => prev.map((p) => (p.id === editingProduct.id ? updated : p)));
-        }
-      } else {
-        // Create via API
-        const res = await fetch("/api/products", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(productData),
-        });
-        if (res.ok) {
-          const created = await res.json();
-          setProductList((prev) => [created, ...prev]);
-        }
-      }
-    } catch {
-      console.error("Failed to save product");
-      // Fallback: add/update locally
-      if (editingProduct) {
-        setProductList((prev) => prev.map((p) => (p.id === editingProduct.id ? productData as Product : p)));
-      } else {
-        setProductList((prev) => [productData as Product, ...prev]);
-      }
-    }
-
-    setSaving(false);
-    resetForm();
-    setActiveTab("products");
-  };
-
-  const handleEdit = (product: Product) => {
-    setEditingProduct(product);
-    setForm({
-      name: product.name, slug: product.slug,
-      category: product.category, categorySlug: product.categorySlug,
-      price: product.price.toString(),
-      originalPrice: product.originalPrice?.toString() || "",
-      description: product.description, shortDescription: product.shortDescription,
-      metal: product.metal, metalWeight: product.metalWeight,
-      stone: product.stone || "", stoneWeight: product.stoneWeight || "",
-      sku: product.sku, tags: product.tags.join(", "),
-      isNew: product.isNew || false, isBestseller: product.isBestseller || false,
-      images: product.images,
-    });
-    setActiveTab("add-product");
-  };
-
-  // Delete product from Supabase
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this product?")) return;
-
-    try {
-      await fetch(`/api/products/${id}`, { method: "DELETE" });
-    } catch {
-      console.error("Delete API failed, removing locally");
-    }
-    setProductList((prev) => prev.filter((p) => p.id !== id));
-  };
-
-  const avgPrice = productList.length > 0
-    ? productList.reduce((sum, p) => sum + p.price, 0) / productList.length
-    : 0;
-
+  // ── Admin Dashboard ──
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-100 shadow-sm">
@@ -266,9 +236,12 @@ export default function AdminPage() {
             <Link href="/" className="font-serif text-xl font-bold text-gray-800">GOLDEN GRACE</Link>
             <span className="text-xs bg-brand/10 text-brand px-2 py-0.5 rounded-full font-medium">Admin</span>
           </div>
-          <Link href="/" className="text-sm text-gray-500 hover:text-brand transition-colors flex items-center gap-1">
-            <Eye className="h-4 w-4" /> View Store
-          </Link>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setAuthenticated(false)} className="text-xs text-gray-400 hover:text-red-500 transition-colors">Lock</button>
+            <Link href="/" className="text-sm text-gray-500 hover:text-brand transition-colors flex items-center gap-1">
+              <Eye className="h-4 w-4" /> View Store
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -300,7 +273,6 @@ export default function AdminPage() {
               </div>
             ) : (
               <>
-                {/* Dashboard */}
                 {activeTab === "dashboard" && (
                   <div className="space-y-6">
                     <h2 className="font-serif text-2xl font-bold text-gray-800">Dashboard</h2>
@@ -334,20 +306,13 @@ export default function AdminPage() {
                         </button>
                         <button
                           onClick={async () => {
-                            setSeeding(true);
-                            setSeedStatus("idle");
+                            setSeeding(true); setSeedStatus("idle");
                             try {
                               const res = await fetch("/api/seed", { method: "POST" });
                               const data = await res.json();
-                              if (data.success) {
-                                setSeedStatus("success");
-                                fetchProducts();
-                              } else {
-                                setSeedStatus("error");
-                              }
-                            } catch {
-                              setSeedStatus("error");
-                            }
+                              if (data.success) { setSeedStatus("success"); fetchProducts(); }
+                              else { setSeedStatus("error"); }
+                            } catch { setSeedStatus("error"); }
                             setSeeding(false);
                           }}
                           disabled={seeding}
@@ -357,13 +322,12 @@ export default function AdminPage() {
                           {seeding ? "Seeding..." : "Seed 55 Products to Supabase"}
                         </button>
                       </div>
-                      {seedStatus === "success" && <p className="text-xs text-green-600 mt-3">✅ All 55 products inserted into Supabase database!</p>}
-                      {seedStatus === "error" && <p className="text-xs text-red-500 mt-3">❌ Seed failed. Run the SQL schema first in Supabase SQL Editor.</p>}
+                      {seedStatus === "success" && <p className="text-xs text-green-600 mt-3">All 55 products inserted into Supabase database!</p>}
+                      {seedStatus === "error" && <p className="text-xs text-red-500 mt-3">Seed failed. Run the SQL schema first in Supabase SQL Editor.</p>}
                     </div>
                   </div>
                 )}
 
-                {/* Products List */}
                 {activeTab === "products" && (
                   <div>
                     <div className="flex items-center justify-between mb-4">
@@ -400,9 +364,7 @@ export default function AdminPage() {
                                   </div>
                                 </td>
                                 <td className="px-4 py-3 text-gray-500">{product.category}</td>
-                                <td className="px-4 py-3">
-                                  <span className="font-semibold text-gray-800">{formatPrice(product.price)}</span>
-                                </td>
+                                <td className="px-4 py-3"><span className="font-semibold text-gray-800">{formatPrice(product.price)}</span></td>
                                 <td className="px-4 py-3">
                                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${product.inStock ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"}`}>
                                     {product.inStock ? "In Stock" : "Out of Stock"}
@@ -427,14 +389,12 @@ export default function AdminPage() {
                   </div>
                 )}
 
-                {/* Add/Edit Product */}
                 {activeTab === "add-product" && (
                   <div>
                     <h2 className="font-serif text-2xl font-bold text-gray-800 mb-4">
                       {editingProduct ? "Edit Product" : "Add New Product"}
                     </h2>
                     <form onSubmit={handleSaveProduct} className="space-y-6">
-                      {/* Image Upload */}
                       <div className="bg-white rounded-2xl border border-gray-100 p-6">
                         <h3 className="text-sm font-semibold text-gray-800 mb-3">Product Images (Uploaded to Supabase Storage)</h3>
                         <div className="flex flex-wrap gap-3">
@@ -449,17 +409,15 @@ export default function AdminPage() {
                           ))}
                           <button type="button" onClick={() => fileInputRef.current?.click()}
                             className="w-24 h-24 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center text-gray-400 hover:border-brand hover:text-brand transition-colors">
-                            <Upload className="h-6 w-6 mb-1" />
-                            <span className="text-[10px]">Upload</span>
+                            <Upload className="h-6 w-6 mb-1" /><span className="text-[10px]">Upload</span>
                           </button>
                         </div>
                         <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
                         {uploadStatus === "uploading" && <p className="text-xs text-brand mt-2 flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Uploading to Supabase...</p>}
                         {uploadStatus === "success" && <p className="text-xs text-green-600 mt-2 flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Uploaded successfully</p>}
-                        {uploadStatus === "error" && <p className="text-xs text-red-500 mt-2">Upload failed. Check Supabase Storage bucket.</p>}
+                        {uploadStatus === "error" && <p className="text-xs text-red-500 mt-2">Upload failed.</p>}
                       </div>
 
-                      {/* Basic Info */}
                       <div className="bg-white rounded-2xl border border-gray-100 p-6">
                         <h3 className="text-sm font-semibold text-gray-800 mb-3">Basic Information</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -493,7 +451,6 @@ export default function AdminPage() {
                         </div>
                       </div>
 
-                      {/* Pricing */}
                       <div className="bg-white rounded-2xl border border-gray-100 p-6">
                         <h3 className="text-sm font-semibold text-gray-800 mb-3">Pricing</h3>
                         <div className="grid grid-cols-2 gap-4">
@@ -510,7 +467,6 @@ export default function AdminPage() {
                         </div>
                       </div>
 
-                      {/* Product Details */}
                       <div className="bg-white rounded-2xl border border-gray-100 p-6">
                         <h3 className="text-sm font-semibold text-gray-800 mb-3">Product Details</h3>
                         <div className="grid grid-cols-2 gap-4">
@@ -544,7 +500,6 @@ export default function AdminPage() {
                         </div>
                       </div>
 
-                      {/* Flags */}
                       <div className="bg-white rounded-2xl border border-gray-100 p-6">
                         <h3 className="text-sm font-semibold text-gray-800 mb-3">Visibility</h3>
                         <div className="flex gap-6">
