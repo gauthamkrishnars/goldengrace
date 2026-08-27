@@ -10,7 +10,7 @@ import {
 import { categories, formatPrice } from "@/data/products";
 import { Product } from "@/data/types";
 
-type AdminTab = "dashboard" | "products" | "add-product";
+type AdminTab = "dashboard" | "products" | "add-product" | "orders";
 const ADMIN_PASSWORD = "goldengrace";
 
 export default function AdminPage() {
@@ -30,6 +30,9 @@ export default function AdminPage() {
   const [seedStatus, setSeedStatus] = useState<"idle" | "success" | "error">("idle");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [orderList, setOrderList] = useState<any[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+
   const [form, setForm] = useState({
     name: "", slug: "", category: "Rings", categorySlug: "rings",
     price: "", originalPrice: "", description: "", shortDescription: "",
@@ -41,6 +44,31 @@ export default function AdminPage() {
   useEffect(() => {
     if (authenticated) fetchProducts();
   }, [authenticated]);
+
+  const fetchOrders = async () => {
+    setOrdersLoading(true);
+    try {
+      const res = await fetch("/api/orders");
+      const data = await res.json();
+      setOrderList(data);
+    } catch {
+      console.error("Failed to fetch orders");
+    }
+    setOrdersLoading(false);
+  };
+
+  const updateOrderStatus = async (orderId: string, status: string) => {
+    try {
+      await fetch(`/api/orders/${orderId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      setOrderList((prev) => prev.map((o) => o.id === orderId ? { ...o, status } : o));
+    } catch {
+      console.error("Failed to update order");
+    }
+  };
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -253,6 +281,7 @@ export default function AdminPage() {
                 { id: "dashboard" as const, label: "Dashboard", icon: LayoutDashboard },
                 { id: "products" as const, label: "Products", icon: Package },
                 { id: "add-product" as const, label: "Add Product", icon: Plus },
+                { id: "orders" as const, label: "Orders", icon: Package },
               ].map((tab) => {
                 const Icon = tab.icon;
                 return (
@@ -303,6 +332,10 @@ export default function AdminPage() {
                         <button onClick={() => setActiveTab("products")}
                           className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
                           <Package className="h-4 w-4" /> View All Products
+                        </button>
+                        <button onClick={() => { setActiveTab("orders"); fetchOrders(); }}
+                          className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+                          <Package className="h-4 w-4" /> View Orders
                         </button>
                         <button
                           onClick={async () => {
@@ -386,6 +419,90 @@ export default function AdminPage() {
                         </table>
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {activeTab === "orders" && (
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="font-serif text-2xl font-bold text-gray-800">Orders</h2>
+                      <button onClick={fetchOrders} className="text-sm text-brand hover:underline">Refresh</button>
+                    </div>
+                    {ordersLoading ? (
+                      <div className="flex items-center justify-center py-20">
+                        <Loader2 className="h-8 w-8 text-brand animate-spin" />
+                      </div>
+                    ) : orderList.length === 0 ? (
+                      <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
+                        <Package className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500">No orders yet</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {orderList.map((order) => (
+                          <div key={order.id} className="bg-white rounded-2xl border border-gray-100 p-6">
+                            <div className="flex items-center justify-between mb-4">
+                              <div>
+                                <p className="text-sm font-semibold text-gray-800">Order #{order.id.slice(-8).toUpperCase()}</p>
+                                <p className="text-xs text-gray-400">{new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <select
+                                  value={order.status}
+                                  onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                                  className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand/20"
+                                >
+                                  <option value="pending">Pending</option>
+                                  <option value="confirmed">Confirmed</option>
+                                  <option value="processing">Processing</option>
+                                  <option value="shipped">Shipped</option>
+                                  <option value="delivered">Delivered</option>
+                                  <option value="cancelled">Cancelled</option>
+                                </select>
+                                <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                                  order.status === 'delivered' ? 'bg-green-50 text-green-600' :
+                                  order.status === 'shipped' ? 'bg-blue-50 text-blue-600' :
+                                  order.status === 'cancelled' ? 'bg-red-50 text-red-600' :
+                                  'bg-yellow-50 text-yellow-600'
+                                }`}>{order.status}</span>
+                              </div>
+                            </div>
+                            <div className="border-t border-gray-50 pt-4">
+                              {order.items?.map((item: any, idx: number) => (
+                                <div key={idx} className="flex items-center gap-3 py-2">
+                                  <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-gray-50 flex-shrink-0">
+                                    {item.image && <Image src={item.image} alt="" fill className="object-cover" sizes="48px" />}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-800 truncate">{item.name}</p>
+                                    <p className="text-xs text-gray-400">Qty: {item.quantity}</p>
+                                  </div>
+                                  <p className="text-sm font-semibold text-gray-800">{formatPrice(item.price * item.quantity)}</p>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="border-t border-gray-50 pt-4 mt-2">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Customer</span>
+                                <span className="text-gray-800">{order.customer_name || 'N/A'}</span>
+                              </div>
+                              <div className="flex justify-between text-sm mt-1">
+                                <span className="text-gray-500">Email</span>
+                                <span className="text-gray-800">{order.customer_email || 'N/A'}</span>
+                              </div>
+                              <div className="flex justify-between text-sm mt-1">
+                                <span className="text-gray-500">Payment</span>
+                                <span className="text-gray-800">{order.payment_method || 'N/A'}</span>
+                              </div>
+                              <div className="flex justify-between text-sm mt-1">
+                                <span className="text-gray-500">Total</span>
+                                <span className="font-bold text-gray-800">{formatPrice(order.total)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 

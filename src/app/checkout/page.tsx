@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Check, CreditCard, MapPin, Package, ArrowLeft, ArrowRight, Shield, Loader2 } from "lucide-react";
+import { Check, CreditCard, MapPin, Package, ArrowLeft, ArrowRight, Shield, Loader2, LogIn } from "lucide-react";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 import { formatPrice } from "@/data/products";
 import Footer from "@/components/Footer";
 
@@ -46,10 +47,17 @@ interface RazorpayInstance {
 
 export default function CheckoutPage() {
   const { items, totalPrice, totalItems, clearCart } = useCart();
+  const { user, isLoggedIn, login } = useAuth();
   const [currentStep, setCurrentStep] = useState<Step>("address");
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [orderId, setOrderId] = useState("");
+
+  // Login form for checkout
+  const [checkoutEmail, setCheckoutEmail] = useState("");
+  const [checkoutPassword, setCheckoutPassword] = useState("");
+  const [loginError, setLoginError] = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
 
   const [address, setAddress] = useState({
     fullName: "", phone: "", addressLine1: "", addressLine2: "",
@@ -57,8 +65,23 @@ export default function CheckoutPage() {
   });
 
   const [paymentMethod, setPaymentMethod] = useState("razorpay");
-
   const stepIndex = steps.findIndex((s) => s.id === currentStep);
+
+  const handleCheckoutLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginLoading(true);
+    setLoginError(false);
+    // Simulate login
+    setTimeout(() => {
+      if (checkoutEmail && checkoutPassword.length >= 6) {
+        login(checkoutEmail, checkoutPassword);
+        setLoginLoading(false);
+      } else {
+        setLoginError(true);
+        setLoginLoading(false);
+      }
+    }, 800);
+  };
 
   const handleNext = () => {
     if (currentStep === "address") setCurrentStep("payment");
@@ -71,8 +94,13 @@ export default function CheckoutPage() {
 
   const handlePayment = async () => {
     setProcessing(true);
+    const orderItems = items.map((item) => ({
+      name: item.product.name,
+      price: item.product.price,
+      quantity: item.quantity,
+      image: item.product.images[0],
+    }));
 
-    // Try to create order via API
     try {
       const res = await fetch("/api/create-order", {
         method: "POST",
@@ -82,43 +110,51 @@ export default function CheckoutPage() {
 
       if (res.ok) {
         const data = await res.json();
-        // Razorpay checkout
-        const options: RazorpayOptions = {
-          key: data.key || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "",
-          amount: data.amount || totalPrice * 100,
-          currency: data.currency || "INR",
-          name: "Golden Grace",
-          description: `Order - ${totalItems} items`,
-          handler: (response: RazorpayResponse) => {
-            setOrderId(response.razorpay_payment_id || `GG-${Date.now()}`);
-            setOrderPlaced(true);
-            setCurrentStep("confirmation");
-            clearCart();
-            setProcessing(false);
-          },
-          prefill: {
-            name: address.fullName,
-            email: "",
-            contact: address.phone,
-          },
-          theme: { color: "#587284" },
-        };
 
-        const rzp = new window.Razorpay(options);
-        rzp.on("payment.failed", () => {
-          setProcessing(false);
-          alert("Payment failed. Please try again.");
-        });
-        rzp.open();
-        return;
+        if (data.key) {
+          // Real Razorpay
+          const options: RazorpayOptions = {
+            key: data.key,
+            amount: data.amount || totalPrice * 100,
+            currency: data.currency || "INR",
+            name: "Golden Grace",
+            description: `Order - ${totalItems} items`,
+            handler: async (response: RazorpayResponse) => {
+              const newOrderId = response.razorpay_payment_id || `GG-${Date.now().toString(36).toUpperCase()}`;
+              // Save order to database
+              await saveOrder(newOrderId, orderItems, response.razorpay_payment_id);
+              setOrderId(newOrderId);
+              setOrderPlaced(true);
+              setCurrentStep("confirmation");
+              clearCart();
+              setProcessing(false);
+            },
+            prefill: {
+              name: user?.name || address.fullName,
+              email: user?.email || "",
+              contact: address.phone,
+            },
+            theme: { color: "#587284" },
+          };
+
+          const rzp = new window.Razorpay(options);
+          rzp.on("payment.failed", () => {
+            setProcessing(false);
+            alert("Payment failed. Please try again.");
+          });
+          rzp.open();
+          return;
+        }
       }
     } catch {
-      // API not available, proceed with demo mode
+      // API not available
     }
 
-    // Demo fallback: simulate successful payment
+    // Demo mode
+    const newOrderId = `GG-${Date.now().toString(36).toUpperCase()}`;
+    await saveOrder(newOrderId, orderItems, null);
     setTimeout(() => {
-      setOrderId(`GG-${Date.now().toString(36).toUpperCase()}`);
+      setOrderId(newOrderId);
       setOrderPlaced(true);
       setCurrentStep("confirmation");
       clearCart();
@@ -126,6 +162,91 @@ export default function CheckoutPage() {
     }, 1500);
   };
 
+  const saveOrder = async (id: string, orderItems: Record<string, unknown>[], paymentId: string | null) => {
+    try {
+      await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id,
+          userEmail: user?.email || checkoutEmail,
+          userName: user?.name || checkoutEmail.split("@")[0],
+          userPhone: address.phone,
+          items: orderItems,
+          total: totalPrice,
+          shippingAddress: address,
+          paymentMethod,
+          paymentId,
+        }),
+      });
+    } catch {
+      console.error("Failed to save order");
+    }
+  };
+
+  // Not logged in — show login gate
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <header className="bg-white border-b border-gray-100 py-4 px-4">
+          <div className="max-w-4xl mx-auto flex items-center justify-between">
+            <Link href="/" className="font-serif text-xl font-bold text-gray-800">GOLDEN GRACE</Link>
+            <h1 className="text-sm font-semibold text-gray-600">Checkout</h1>
+          </div>
+        </header>
+
+        <div className="max-w-md mx-auto px-4 py-16">
+          <div className="bg-white rounded-2xl border border-gray-100 p-8 shadow-sm">
+            <div className="text-center mb-6">
+              <div className="w-14 h-14 bg-brand/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                <LogIn className="h-7 w-7 text-brand" />
+              </div>
+              <h2 className="text-lg font-bold text-gray-800">Login Required</h2>
+              <p className="text-sm text-gray-500 mt-1">Please login to proceed with checkout and track your orders</p>
+            </div>
+
+            <form onSubmit={handleCheckoutLogin} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input type="email" value={checkoutEmail} onChange={(e) => setCheckoutEmail(e.target.value)}
+                  placeholder="you@example.com" required
+                  className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <input type="password" value={checkoutPassword} onChange={(e) => setCheckoutPassword(e.target.value)}
+                  placeholder="Min 6 characters" required
+                  className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20" />
+              </div>
+              {loginError && <p className="text-xs text-red-500">Please enter a valid email and password (min 6 chars)</p>}
+              <button type="submit" disabled={loginLoading}
+                className="w-full py-3 bg-brand text-white text-sm font-semibold rounded-lg hover:bg-brand/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                {loginLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                {loginLoading ? "Logging in..." : "Login & Continue to Checkout"}
+              </button>
+            </form>
+
+            <div className="flex items-center gap-3 my-5">
+              <div className="flex-1 border-t border-gray-100" />
+              <span className="text-xs text-gray-400">or</span>
+              <div className="flex-1 border-t border-gray-100" />
+            </div>
+
+            <Link href="/auth/signup" className="block w-full py-3 border border-gray-200 text-gray-600 text-sm font-medium rounded-lg text-center hover:bg-gray-50 transition-colors">
+              Create New Account
+            </Link>
+          </div>
+
+          <p className="text-center text-xs text-gray-400 mt-6">
+            <Link href="/cart" className="hover:text-brand">&larr; Back to Cart</Link>
+          </p>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Empty cart
   if (items.length === 0 && !orderPlaced) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
@@ -146,7 +267,10 @@ export default function CheckoutPage() {
       <header className="bg-white border-b border-gray-100 py-4 px-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Link href="/" className="font-serif text-xl font-bold text-gray-800">GOLDEN GRACE</Link>
-          <h1 className="text-sm font-semibold text-gray-600">Checkout</h1>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-gray-400">{user?.email}</span>
+            <h1 className="text-sm font-semibold text-gray-600">Checkout</h1>
+          </div>
         </div>
       </header>
 
@@ -172,7 +296,6 @@ export default function CheckoutPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-            {/* Address Step */}
             {currentStep === "address" && (
               <div className="bg-white rounded-2xl border border-gray-100 p-6">
                 <h2 className="text-lg font-bold text-gray-800 mb-4">Delivery Address</h2>
@@ -222,15 +345,13 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            {/* Payment Step */}
             {currentStep === "payment" && (
               <div className="bg-white rounded-2xl border border-gray-100 p-6">
                 <h2 className="text-lg font-bold text-gray-800 mb-4">Payment Method</h2>
                 <div className="space-y-3">
                   {[
-                    { id: "razorpay", label: "Razorpay (UPI / Cards / Net Banking / Wallets)", icon: "💳" },
-                    { id: "cod", label: "Cash on Delivery", icon: "💵" },
-                    { id: "emi", label: "EMI (Gold Mine 10+1)", icon: "💰" },
+                    { id: "razorpay", label: "Razorpay (UPI / Cards / Net Banking / Wallets)", icon: "R" },
+                    { id: "cod", label: "Cash on Delivery", icon: "C" },
                   ].map((method) => (
                     <label key={method.id}
                       className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${
@@ -238,7 +359,7 @@ export default function CheckoutPage() {
                       }`}>
                       <input type="radio" name="payment" value={method.id} checked={paymentMethod === method.id}
                         onChange={(e) => setPaymentMethod(e.target.value)} className="text-brand focus:ring-brand" />
-                      <span className="text-lg">{method.icon}</span>
+                      <span className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-bold text-gray-600">{method.icon}</span>
                       <span className="text-sm font-medium text-gray-700">{method.label}</span>
                     </label>
                   ))}
@@ -246,13 +367,12 @@ export default function CheckoutPage() {
 
                 <div className="mt-4 p-3 bg-blue-50 rounded-xl">
                   <p className="text-xs text-blue-700 flex items-center gap-1.5">
-                    <Shield className="h-4 w-4" /> Razorpay processes UPI, Credit/Debit Cards, Net Banking, and Wallets securely. No card details stored on our servers.
+                    <Shield className="h-4 w-4" /> Razorpay processes payments securely. No card details stored on our servers.
                   </p>
                 </div>
               </div>
             )}
 
-            {/* Confirmation Step */}
             {currentStep === "confirmation" && (
               <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -276,7 +396,6 @@ export default function CheckoutPage() {
             )}
           </div>
 
-          {/* Order Summary */}
           {currentStep !== "confirmation" && (
             <div className="lg:col-span-1">
               <div className="bg-white rounded-2xl border border-gray-100 p-5 sticky top-4">
