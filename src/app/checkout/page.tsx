@@ -47,7 +47,7 @@ interface RazorpayInstance {
 
 export default function CheckoutPage() {
   const { items, totalPrice, totalItems, clearCart } = useCart();
-  const { user, isLoggedIn, login } = useAuth();
+  const { user, isLoggedIn, login, refreshOrders } = useAuth();
   const [currentStep, setCurrentStep] = useState<Step>("address");
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -130,11 +130,10 @@ export default function CheckoutPage() {
             amount: data.amount || totalPrice * 100,
             currency: data.currency || "INR",
             name: "Golden Grace",
-            description: `Order - ${totalItems} items`,
-            handler: async (response: RazorpayResponse) => {
+            description: `Order - ${totalItems} items`,              handler: async (response: RazorpayResponse) => {
               const newOrderId = response.razorpay_payment_id || `GG-${Date.now().toString(36).toUpperCase()}`;
-              // Save order to database
               await saveOrder(newOrderId, orderItems, response.razorpay_payment_id);
+              await refreshOrders();
               setOrderId(newOrderId);
               setOrderPlaced(true);
               setCurrentStep("confirmation");
@@ -165,6 +164,7 @@ export default function CheckoutPage() {
     // Demo mode
     const newOrderId = `GG-${Date.now().toString(36).toUpperCase()}`;
     await saveOrder(newOrderId, orderItems, null);
+    await refreshOrders();
     setTimeout(() => {
       setOrderId(newOrderId);
       setOrderPlaced(true);

@@ -124,11 +124,11 @@ export default function ProfilePage() {
                 My Wishlist
                 <ChevronRight className="h-4 w-4 ml-auto text-gray-400" />
               </Link>
-              <Link href="/orders" className="flex items-center gap-3 px-4 py-3 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+              <button onClick={() => { setActiveTab("orders"); refreshOrders(); }} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-600 hover:bg-gray-50 transition-colors text-left">
                 <Package className="h-4 w-4" />
                 Track Orders
                 <ChevronRight className="h-4 w-4 ml-auto text-gray-400" />
-              </Link>
+              </button>
               <Link href="/cart" className="flex items-center gap-3 px-4 py-3 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
                 <Package className="h-4 w-4" />
                 Shopping Cart
@@ -178,9 +178,9 @@ export default function ProfilePage() {
 
                       <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                         <span className="text-sm font-bold text-gray-800">Total: {formatPrice(order.total)}</span>
-                        <Link href={`/orders?highlight=${order.id}`} className="text-xs text-brand font-medium hover:underline">
-                          Track Order
-                        </Link>
+                        <button onClick={() => setActiveTab("orders")} className="text-xs text-brand font-medium hover:underline">
+                          View Details
+                        </button>
                       </div>
                     </div>
                   ))
