@@ -30,10 +30,13 @@ export async function POST(request: Request) {
 
     const order = {
       id: body.id || `GG-${Date.now().toString(36).toUpperCase()}`,
+      user_id: body.userId || null,
       user_email: body.userEmail,
       user_name: body.userName,
       user_phone: body.userPhone,
       items: body.items,
+      subtotal: body.subtotal || body.total,
+      shipping: body.shipping || 0,
       total: body.total,
       status: "Processing",
       shipping_address: body.shippingAddress,

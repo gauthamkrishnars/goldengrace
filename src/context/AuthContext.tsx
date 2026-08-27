@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { User } from "@supabase/supabase-js";
 
 interface UserProfile {
+  id?: string;
   name: string;
   email: string;
   phone: string;
@@ -59,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (data) {
       setUser((prev) => ({
+        id: prev?.id || supabaseUserRef.current?.id,
         name: data.full_name || "",
         email: prev?.email || supabaseUserRef.current?.email || "",
         phone: data.phone || "",
@@ -100,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSupabaseUser(data.user);
       // Set email on user profile from supabase auth user
       setUser((prev) => ({
+        id: data.user.id,
         name: prev?.name || "",
         email: data.user.email || "",
         phone: prev?.phone || "",
@@ -121,7 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) return { error: error.message };
     if (data.user) {
       setSupabaseUser(data.user);
-      setUser({ name, email, phone });
+      setUser({ id: data.user.id, name, email, phone });
       // Profile is auto-created by trigger, but let's ensure phone is saved
       if (data.user.id) {
         await supabase.from("user_profiles").upsert({
@@ -168,6 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         setSupabaseUser(session.user);
         setUser((prev) => ({
+          id: session.user.id,
           name: prev?.name || "",
           email: session.user.email || "",
           phone: prev?.phone || "",
@@ -184,6 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === "SIGNED_IN" && session?.user) {
         setSupabaseUser(session.user);
         setUser((prev) => ({
+          id: session.user!.id,
           name: prev?.name || "",
           email: session.user!.email || "",
           phone: prev?.phone || "",

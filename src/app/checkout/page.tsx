@@ -67,25 +67,37 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState("razorpay");
   const stepIndex = steps.findIndex((s) => s.id === currentStep);
 
-  const handleCheckoutLogin = (e: React.FormEvent) => {
+  const handleCheckoutLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginLoading(true);
     setLoginError(false);
-    // Simulate login
-    setTimeout(() => {
-      if (checkoutEmail && checkoutPassword.length >= 6) {
-        login(checkoutEmail, checkoutPassword);
-        setLoginLoading(false);
-      } else {
-        setLoginError(true);
-        setLoginLoading(false);
-      }
-    }, 800);
+    const result = await login(checkoutEmail, checkoutPassword);
+    if (result.error) {
+      setLoginError(true);
+    }
+    setLoginLoading(false);
+  };
+
+  const [addressErrors, setAddressErrors] = useState<Record<string, string>>({});
+
+  const validateAddress = () => {
+    const errs: Record<string, string> = {};
+    if (!address.fullName.trim()) errs.fullName = "Name is required";
+    if (!address.phone.trim()) errs.phone = "Phone is required";
+    else if (!/^\d{10}$/.test(address.phone)) errs.phone = "Invalid 10-digit phone";
+    if (!address.addressLine1.trim()) errs.addressLine1 = "Address is required";
+    if (!address.city.trim()) errs.city = "City is required";
+    if (!address.state.trim()) errs.state = "State is required";
+    if (!address.pincode.trim()) errs.pincode = "Pincode is required";
+    else if (!/^\d{6}$/.test(address.pincode)) errs.pincode = "Invalid 6-digit pincode";
+    setAddressErrors(errs);
+    return Object.keys(errs).length === 0;
   };
 
   const handleNext = () => {
-    if (currentStep === "address") setCurrentStep("payment");
-    else if (currentStep === "payment") handlePayment();
+    if (currentStep === "address") {
+      if (validateAddress()) setCurrentStep("payment");
+    } else if (currentStep === "payment") handlePayment();
   };
 
   const handleBack = () => {
@@ -169,10 +181,13 @@ export default function CheckoutPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id,
+          userId: user?.id || "",
           userEmail: user?.email || checkoutEmail,
           userName: user?.name || checkoutEmail.split("@")[0],
           userPhone: address.phone,
           items: orderItems,
+          subtotal: totalPrice,
+          shipping: 0,
           total: totalPrice,
           shippingAddress: address,
           paymentMethod,
@@ -304,19 +319,22 @@ export default function CheckoutPage() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
                       <input type="text" value={address.fullName} onChange={(e) => setAddress({ ...address, fullName: e.target.value })}
-                        className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20" />
+                        className={`w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 ${addressErrors.fullName ? "border-red-300 focus:ring-red-200" : "border-gray-200 focus:ring-brand/20"}`} />
+                      {addressErrors.fullName && <p className="text-xs text-red-500 mt-1">{addressErrors.fullName}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                      <input type="tel" value={address.phone} onChange={(e) => setAddress({ ...address, phone: e.target.value })}
-                        className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20" />
+                      <input type="tel" value={address.phone} onChange={(e) => setAddress({ ...address, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
+                        className={`w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 ${addressErrors.phone ? "border-red-300 focus:ring-red-200" : "border-gray-200 focus:ring-brand/20"}`} />
+                      {addressErrors.phone && <p className="text-xs text-red-500 mt-1">{addressErrors.phone}</p>}
                     </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 1</label>
                     <input type="text" value={address.addressLine1} onChange={(e) => setAddress({ ...address, addressLine1: e.target.value })}
                       placeholder="House/Flat No., Building Name"
-                      className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20" />
+                      className={`w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 ${addressErrors.addressLine1 ? "border-red-300 focus:ring-red-200" : "border-gray-200 focus:ring-brand/20"}`} />
+                    {addressErrors.addressLine1 && <p className="text-xs text-red-500 mt-1">{addressErrors.addressLine1}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 2 (Optional)</label>
@@ -328,17 +346,20 @@ export default function CheckoutPage() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
                       <input type="text" value={address.city} onChange={(e) => setAddress({ ...address, city: e.target.value })}
-                        className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20" />
+                        className={`w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 ${addressErrors.city ? "border-red-300 focus:ring-red-200" : "border-gray-200 focus:ring-brand/20"}`} />
+                      {addressErrors.city && <p className="text-xs text-red-500 mt-1">{addressErrors.city}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
                       <input type="text" value={address.state} onChange={(e) => setAddress({ ...address, state: e.target.value })}
-                        className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20" />
+                        className={`w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 ${addressErrors.state ? "border-red-300 focus:ring-red-200" : "border-gray-200 focus:ring-brand/20"}`} />
+                      {addressErrors.state && <p className="text-xs text-red-500 mt-1">{addressErrors.state}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Pincode</label>
                       <input type="text" value={address.pincode} onChange={(e) => setAddress({ ...address, pincode: e.target.value.replace(/\D/g, "").slice(0, 6) })}
-                        className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20" />
+                        className={`w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 ${addressErrors.pincode ? "border-red-300 focus:ring-red-200" : "border-gray-200 focus:ring-brand/20"}`} />
+                      {addressErrors.pincode && <p className="text-xs text-red-500 mt-1">{addressErrors.pincode}</p>}
                     </div>
                   </div>
                 </div>
