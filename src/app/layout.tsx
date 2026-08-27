@@ -28,6 +28,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${inter.variable} ${playfair.variable} h-full antialiased`}
     >
+      <head>
+        <script src="https://checkout.razorpay.com/v1/checkout.js" />
+      </head>
       <body className="min-h-full flex flex-col">
         <AuthProvider>
           <WishlistProvider>
