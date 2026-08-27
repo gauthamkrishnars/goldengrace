@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const supabase = getSupabaseServer();
 
-    const orderId = body.id || `GG-${Date.now().toString(36).toUpperCase()}`;
+    const orderId = body.id || `GG-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 
     const order = {
       id: orderId,

@@ -123,22 +123,24 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   }, [fetchWishlist]);
 
   const addItem = useCallback((product: Product) => {
+    let didAdd = false;
     setItems((prev) => {
       if (prev.some((p) => p.id === product.id)) return prev;
+      didAdd = true;
       const next = [...prev, product];
       saveLocalWishlist(next);
-      syncToSupabase(product.id, "add");
       return next;
     });
+    if (didAdd) syncToSupabase(product.id, "add");
   }, [syncToSupabase]);
 
   const removeItem = useCallback((productId: string) => {
     setItems((prev) => {
       const next = prev.filter((p) => p.id !== productId);
       saveLocalWishlist(next);
-      syncToSupabase(productId, "remove");
       return next;
     });
+    syncToSupabase(productId, "remove");
   }, [syncToSupabase]);
 
   const isInWishlist = useCallback(

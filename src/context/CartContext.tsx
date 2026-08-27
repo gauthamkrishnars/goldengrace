@@ -144,31 +144,34 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [fetchCart]);
 
   const addItem = useCallback((product: Product, quantity = 1) => {
+    let syncQty = 0;
     setItems((prev) => {
       const existing = prev.find((item) => item.product.id === product.id);
       let next: CartItem[];
       if (existing) {
+        syncQty = existing.quantity + quantity;
         next = prev.map((item) =>
           item.product.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
+            ? { ...item, quantity: syncQty }
             : item
         );
       } else {
+        syncQty = quantity;
         next = [...prev, { product, quantity }];
       }
       saveLocalCart(next);
-      syncToSupabase(product.id, existing ? existing.quantity + quantity : quantity);
       return next;
     });
+    syncToSupabase(product.id, syncQty);
   }, [syncToSupabase]);
 
   const removeItem = useCallback((productId: string) => {
     setItems((prev) => {
       const next = prev.filter((item) => item.product.id !== productId);
       saveLocalCart(next);
-      syncToSupabase(productId, 0);
       return next;
     });
+    syncToSupabase(productId, 0);
   }, [syncToSupabase]);
 
   const updateQuantity = useCallback((productId: string, quantity: number) => {
@@ -176,9 +179,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setItems((prev) => {
         const next = prev.filter((item) => item.product.id !== productId);
         saveLocalCart(next);
-        syncToSupabase(productId, 0);
         return next;
       });
+      syncToSupabase(productId, 0);
       return;
     }
     setItems((prev) => {
@@ -186,9 +189,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         item.product.id === productId ? { ...item, quantity } : item
       );
       saveLocalCart(next);
-      syncToSupabase(productId, quantity);
       return next;
     });
+    syncToSupabase(productId, quantity);
   }, [syncToSupabase]);
 
   const clearCart = useCallback(() => {

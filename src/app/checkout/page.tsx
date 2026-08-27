@@ -194,7 +194,7 @@ export default function CheckoutPage() {
     }
 
     // Demo mode
-    const newOrderId = `GG-${Date.now().toString(36).toUpperCase()}`;
+    const newOrderId = `GG-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
     const saved = await saveOrder(newOrderId, orderItems, null);
     if (saved) {
       await refreshOrders();
