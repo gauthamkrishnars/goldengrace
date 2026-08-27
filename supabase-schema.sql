@@ -163,10 +163,13 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('product-images', 'product-images', true)
 ON CONFLICT (id) DO NOTHING;
 
+DROP POLICY IF EXISTS "Public Access" ON storage.objects;
 CREATE POLICY "Public Access" ON storage.objects
   FOR SELECT USING (bucket_id = 'product-images');
+DROP POLICY IF EXISTS "Authenticated Upload" ON storage.objects;
 CREATE POLICY "Authenticated Upload" ON storage.objects
   FOR INSERT WITH CHECK (bucket_id = 'product-images');
+DROP POLICY IF EXISTS "Authenticated Delete" ON storage.objects;
 CREATE POLICY "Authenticated Delete" ON storage.objects
   FOR DELETE USING (bucket_id = 'product-images');
 
