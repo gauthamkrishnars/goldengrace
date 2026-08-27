@@ -1,7 +1,23 @@
+"use client";
+
+import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { categories } from "@/data/products";
 
 export default function Footer() {
+  const router = useRouter();
+  const [clickCount, setClickCount] = useState(0);
+
+  const handleCopyrightClick = useCallback(() => {
+    const newCount = clickCount + 1;
+    setClickCount(newCount);
+    if (newCount >= 5) {
+      setClickCount(0);
+      router.push("/admin");
+    }
+  }, [clickCount, router]);
+
   return (
     <footer className="bg-gray-900 text-gray-300">
       <div className="max-w-7xl mx-auto px-4 py-12">
@@ -64,15 +80,19 @@ export default function Footer() {
               <li><Link href="/profile" className="text-sm text-gray-400 hover:text-white transition-colors">Track Orders</Link></li>
               <li><Link href="/cart" className="text-sm text-gray-400 hover:text-white transition-colors">Shopping Cart</Link></li>
               <li><Link href="/auth/login" className="text-sm text-gray-400 hover:text-white transition-colors">Sign In / Register</Link></li>
-              <li><Link href="/admin" className="text-sm text-gray-400 hover:text-white transition-colors">Admin Panel</Link></li>
             </ul>
           </div>
         </div>
 
         {/* Bottom Bar */}
         <div className="border-t border-gray-800 mt-10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-gray-500">
-            &copy; 2026 Golden Grace. All rights reserved. Made with love.
+          <p
+            className="text-xs text-gray-500 select-none"
+            onClick={handleCopyrightClick}
+            title={clickCount > 0 ? `${5 - clickCount} more clicks...` : ""}
+          >
+            &copy; 2026 Golden Grace. All rights reserved. Made by{" "}
+            <span className="text-gray-400 font-medium cursor-default">DevCore Studio</span>.
           </p>
           <div className="flex gap-4 text-xs text-gray-500">
             <span>BIS Hallmarked</span>

@@ -12,7 +12,74 @@ import { Product } from "@/data/types";
 
 type AdminTab = "dashboard" | "products" | "add-product";
 
+const ADMIN_PASSWORD = "goldengrace";
+
 export default function AdminPage() {
+  const [authenticated, setAuthenticated] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [passwordError, setPasswordError] = useState(false);
+
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordInput === ADMIN_PASSWORD) {
+      setAuthenticated(true);
+      setPasswordError(false);
+    } else {
+      setPasswordError(true);
+      setPasswordInput("");
+    }
+  };
+
+  if (!authenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <Link href="/" className="font-serif text-3xl font-bold text-gray-800">GOLDEN GRACE</Link>
+            <p className="text-sm text-gray-500 mt-2">Admin Access</p>
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
+            <div className="text-center mb-6">
+              <div className="w-14 h-14 bg-brand/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg className="h-7 w-7 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <h2 className="text-lg font-bold text-gray-800">Enter Password</h2>
+              <p className="text-xs text-gray-400 mt-1">This area is restricted</p>
+            </div>
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <div>
+                <input
+                  type="password"
+                  value={passwordInput}
+                  onChange={(e) => { setPasswordInput(e.target.value); setPasswordError(false); }}
+                  placeholder="Enter admin password"
+                  className={`w-full border rounded-lg px-4 py-3 text-sm text-center tracking-widest focus:outline-none focus:ring-2 transition-all ${
+                    passwordError
+                      ? "border-red-300 focus:ring-red-200 bg-red-50"
+                      : "border-gray-200 focus:ring-brand/20 focus:border-brand/40"
+                  }`}
+                  autoFocus
+                />
+                {passwordError && <p className="text-xs text-red-500 mt-2 text-center">Incorrect password. Try again.</p>}
+              </div>
+              <button
+                type="submit"
+                className="w-full py-3 bg-brand text-white text-sm font-semibold rounded-lg hover:bg-brand/90 transition-colors"
+              >
+                Access Admin Panel
+              </button>
+            </form>
+          </div>
+          <p className="text-center text-xs text-gray-400 mt-6">
+            <Link href="/" className="hover:text-brand">← Back to Store</Link>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
   const [productList, setProductList] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
