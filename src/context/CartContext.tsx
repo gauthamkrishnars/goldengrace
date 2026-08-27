@@ -39,19 +39,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [initialized, setInitialized] = useState(false);
   const userIdRef = useRef<string | null>(null);
 
-  // Keep ref in sync
   useEffect(() => { userIdRef.current = userId; }, [userId]);
 
-  // Fetch cart from Supabase
   const fetchCart = useCallback(async (uid: string) => {
-    const { data } = await supabase
-      .from("cart_items")
-      .select("product_id, quantity")
-      .eq("user_id", uid);
+    try {
+      const { data, error } = await supabase
+        .from("cart_items")
+        .select("product_id, quantity")
+        .eq("user_id", uid);
 
-    if (data && data.length > 0) {
-      // We need to resolve product details from the local products data
-      // For now, store product_id + quantity and resolve on the client
+      if (error || !data || data.length === 0) {
+        setItems([]);
+        saveLocalCart([]);
+        return;
+      }
+
       const { products } = await import("@/data/products");
       const resolved: CartItem[] = data
         .map((row) => {
@@ -62,43 +64,52 @@ export function CartProvider({ children }: { children: ReactNode }) {
         .filter(Boolean) as CartItem[];
       setItems(resolved);
       saveLocalCart(resolved);
-    } else {
+    } catch {
+      // Table might not exist — fall back to empty
       setItems([]);
       saveLocalCart([]);
     }
   }, []);
 
-  // Sync a cart item to Supabase
   const syncToSupabase = useCallback(async (productId: string, quantity: number) => {
     const uid = userIdRef.current;
     if (!uid) return;
 
-    if (quantity <= 0) {
-      await supabase.from("cart_items").delete().eq("user_id", uid).eq("product_id", productId);
-    } else {
-      await supabase.from("cart_items").upsert(
-        { user_id: uid, product_id: productId, quantity, updated_at: new Date().toISOString() },
-        { onConflict: "user_id,product_id" }
-      );
+    try {
+      if (quantity <= 0) {
+        await supabase.from("cart_items").delete().eq("user_id", uid).eq("product_id", productId);
+      } else {
+        await supabase.from("cart_items").upsert(
+          { user_id: uid, product_id: productId, quantity, updated_at: new Date().toISOString() },
+          { onConflict: "user_id,product_id" }
+        );
+      }
+    } catch {
+      // Table might not exist — local storage is the fallback
     }
   }, []);
 
-  // Clear all Supabase cart items
   const clearSupabaseCart = useCallback(async () => {
     const uid = userIdRef.current;
     if (!uid) return;
-    await supabase.from("cart_items").delete().eq("user_id", uid);
+    try {
+      await supabase.from("cart_items").delete().eq("user_id", uid);
+    } catch {
+      // Table might not exist
+    }
   }, []);
 
-  // Listen for auth state changes
   useEffect(() => {
     const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setUserId(session.user.id);
-        await fetchCart(session.user.id);
-      } else {
-        // Guest: load from localStorage
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setUserId(session.user.id);
+          await fetchCart(session.user.id);
+        } else {
+          setItems(getLocalCart());
+        }
+      } catch {
         setItems(getLocalCart());
       }
       setInitialized(true);
@@ -108,14 +119,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session?.user) {
         setUserId(session.user.id);
-        // Merge local cart into Supabase before fetching
         const localCart = getLocalCart();
         if (localCart.length > 0) {
           for (const item of localCart) {
-            await supabase.from("cart_items").upsert(
-              { user_id: session.user.id, product_id: item.product.id, quantity: item.quantity, updated_at: new Date().toISOString() },
-              { onConflict: "user_id,product_id" }
-            );
+            try {
+              await supabase.from("cart_items").upsert(
+                { user_id: session.user.id, product_id: item.product.id, quantity: item.quantity, updated_at: new Date().toISOString() },
+                { onConflict: "user_id,product_id" }
+              );
+            } catch {
+              // Table might not exist
+            }
           }
           localStorage.removeItem(CART_STORAGE_KEY);
         }

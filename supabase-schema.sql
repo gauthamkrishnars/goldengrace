@@ -1,29 +1,32 @@
 -- Golden Grace E-Commerce Database Schema
--- Run this in your Supabase SQL Editor
+-- Run this ENTIRE file in your Supabase SQL Editor
 
 -- ============================================================
--- 1. ENABLE AUTH (run once)
--- ============================================================
--- Auth is enabled by default in Supabase projects.
--- Users sign up/login via the Supabase Auth UI or JS client.
-
--- ============================================================
--- 2. USER PROFILES TABLE (extends Supabase auth.users)
+-- 1. USER PROFILES TABLE (extends Supabase auth.users)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS user_profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  full_name TEXT,
-  phone TEXT,
+  full_name TEXT DEFAULT '',
+  phone TEXT DEFAULT '',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Auto-create profile row when a new user signs up
+-- Wrapped in EXCEPTION block so signup never fails
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO user_profiles (id, full_name)
-  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'full_name', ''));
+  INSERT INTO user_profiles (id, full_name, phone)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
+    COALESCE(NEW.raw_user_meta_data->>'phone', '')
+  );
+  RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+  -- If insert fails (table missing, RLS, etc.), log and continue
+  RAISE WARNING 'handle_new_user: %', SQLERRM;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -36,20 +39,23 @@ CREATE TRIGGER on_auth_user_created
 -- RLS policies for user_profiles
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own profile" ON user_profiles;
 CREATE POLICY "Users can view own profile"
   ON user_profiles FOR SELECT
   USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can update own profile" ON user_profiles;
 CREATE POLICY "Users can update own profile"
   ON user_profiles FOR UPDATE
   USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can insert own profile" ON user_profiles;
 CREATE POLICY "Users can insert own profile"
   ON user_profiles FOR INSERT
   WITH CHECK (auth.uid() = id);
 
 -- ============================================================
--- 3. PRODUCTS TABLE
+-- 2. PRODUCTS TABLE
 -- ============================================================
 CREATE TABLE IF NOT EXISTS products (
   id TEXT PRIMARY KEY,
@@ -79,7 +85,7 @@ CREATE TABLE IF NOT EXISTS products (
 );
 
 -- ============================================================
--- 4. ORDERS TABLE
+-- 3. ORDERS TABLE
 -- ============================================================
 CREATE TABLE IF NOT EXISTS orders (
   id TEXT PRIMARY KEY,
@@ -100,22 +106,7 @@ CREATE TABLE IF NOT EXISTS orders (
 );
 
 -- ============================================================
--- 5. STORAGE BUCKET
--- ============================================================
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('product-images', 'product-images', true)
-ON CONFLICT (id) DO NOTHING;
-
--- Storage policies
-CREATE POLICY "Public Access" ON storage.objects
-  FOR SELECT USING (bucket_id = 'product-images');
-CREATE POLICY "Authenticated Upload" ON storage.objects
-  FOR INSERT WITH CHECK (bucket_id = 'product-images');
-CREATE POLICY "Authenticated Delete" ON storage.objects
-  FOR DELETE USING (bucket_id = 'product-images');
-
--- ============================================================
--- 6. CART ITEMS TABLE (persistent cart per user)
+-- 4. CART ITEMS TABLE
 -- ============================================================
 CREATE TABLE IF NOT EXISTS cart_items (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -127,27 +118,23 @@ CREATE TABLE IF NOT EXISTS cart_items (
   UNIQUE(user_id, product_id)
 );
 
--- RLS policies for cart_items
 ALTER TABLE cart_items ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own cart" ON cart_items;
 CREATE POLICY "Users can view own cart"
-  ON cart_items FOR SELECT
-  USING (auth.uid() = user_id);
-
+  ON cart_items FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can insert own cart" ON cart_items;
 CREATE POLICY "Users can insert own cart"
-  ON cart_items FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
-
+  ON cart_items FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can update own cart" ON cart_items;
 CREATE POLICY "Users can update own cart"
-  ON cart_items FOR UPDATE
-  USING (auth.uid() = user_id);
-
+  ON cart_items FOR UPDATE USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can delete own cart" ON cart_items;
 CREATE POLICY "Users can delete own cart"
-  ON cart_items FOR DELETE
-  USING (auth.uid() = user_id);
+  ON cart_items FOR DELETE USING (auth.uid() = user_id);
 
 -- ============================================================
--- 7. WISHLIST ITEMS TABLE (persistent wishlist per user)
+-- 5. WISHLIST ITEMS TABLE
 -- ============================================================
 CREATE TABLE IF NOT EXISTS wishlist_items (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -157,23 +144,34 @@ CREATE TABLE IF NOT EXISTS wishlist_items (
   UNIQUE(user_id, product_id)
 );
 
--- RLS policies for wishlist_items
 ALTER TABLE wishlist_items ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own wishlist" ON wishlist_items;
 CREATE POLICY "Users can view own wishlist"
-  ON wishlist_items FOR SELECT
-  USING (auth.uid() = user_id);
-
+  ON wishlist_items FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can insert own wishlist" ON wishlist_items;
 CREATE POLICY "Users can insert own wishlist"
-  ON wishlist_items FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
-
+  ON wishlist_items FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can delete own wishlist" ON wishlist_items;
 CREATE POLICY "Users can delete own wishlist"
-  ON wishlist_items FOR DELETE
-  USING (auth.uid() = user_id);
+  ON wishlist_items FOR DELETE USING (auth.uid() = user_id);
 
 -- ============================================================
--- 8. INDEXES
+-- 6. STORAGE BUCKET
+-- ============================================================
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('product-images', 'product-images', true)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "Public Access" ON storage.objects
+  FOR SELECT USING (bucket_id = 'product-images');
+CREATE POLICY "Authenticated Upload" ON storage.objects
+  FOR INSERT WITH CHECK (bucket_id = 'product-images');
+CREATE POLICY "Authenticated Delete" ON storage.objects
+  FOR DELETE USING (bucket_id = 'product-images');
+
+-- ============================================================
+-- 7. INDEXES
 -- ============================================================
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_slug);
 CREATE INDEX IF NOT EXISTS idx_products_in_stock ON products(in_stock);

@@ -40,19 +40,25 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   useEffect(() => { userIdRef.current = userId; }, [userId]);
 
   const fetchWishlist = useCallback(async (uid: string) => {
-    const { data } = await supabase
-      .from("wishlist_items")
-      .select("product_id")
-      .eq("user_id", uid);
+    try {
+      const { data, error } = await supabase
+        .from("wishlist_items")
+        .select("product_id")
+        .eq("user_id", uid);
 
-    if (data && data.length > 0) {
+      if (error || !data || data.length === 0) {
+        setItems([]);
+        saveLocalWishlist([]);
+        return;
+      }
+
       const { products } = await import("@/data/products");
       const resolved = data
         .map((row) => products.find((p) => p.id === row.product_id))
         .filter(Boolean) as Product[];
       setItems(resolved);
       saveLocalWishlist(resolved);
-    } else {
+    } catch {
       setItems([]);
       saveLocalWishlist([]);
     }
@@ -62,27 +68,28 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     const uid = userIdRef.current;
     if (!uid) return;
 
-    if (action === "remove") {
-      await supabase.from("wishlist_items").delete().eq("user_id", uid).eq("product_id", productId);
-    } else {
-      await supabase.from("wishlist_items").insert({ user_id: uid, product_id: productId });
+    try {
+      if (action === "remove") {
+        await supabase.from("wishlist_items").delete().eq("user_id", uid).eq("product_id", productId);
+      } else {
+        await supabase.from("wishlist_items").insert({ user_id: uid, product_id: productId });
+      }
+    } catch {
+      // Table might not exist — localStorage is the fallback
     }
   }, []);
 
-  const clearSupabaseWishlist = useCallback(async () => {
-    const uid = userIdRef.current;
-    if (!uid) return;
-    await supabase.from("wishlist_items").delete().eq("user_id", uid);
-  }, []);
-
-  // Listen for auth state changes
   useEffect(() => {
     const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setUserId(session.user.id);
-        await fetchWishlist(session.user.id);
-      } else {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setUserId(session.user.id);
+          await fetchWishlist(session.user.id);
+        } else {
+          setItems(getLocalWishlist());
+        }
+      } catch {
         setItems(getLocalWishlist());
       }
       setInitialized(true);
@@ -92,13 +99,16 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session?.user) {
         setUserId(session.user.id);
-        // Merge local wishlist into Supabase
         const local = getLocalWishlist();
         if (local.length > 0) {
           for (const product of local) {
-            await supabase.from("wishlist_items").insert(
-              { user_id: session.user.id, product_id: product.id }
-            ).select(); // ignore conflicts
+            try {
+              await supabase.from("wishlist_items").insert(
+                { user_id: session.user.id, product_id: product.id }
+              );
+            } catch {
+              // Table might not exist
+            }
           }
           localStorage.removeItem(WISHLIST_STORAGE_KEY);
         }

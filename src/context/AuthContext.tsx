@@ -43,39 +43,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<Order[]>([]);
 
-  // Use refs to avoid stale closures in callbacks
   const supabaseUserRef = useRef<User | null>(null);
   const userRef = useRef<UserProfile | null>(null);
 
-  // Keep refs in sync
   useEffect(() => { supabaseUserRef.current = supabaseUser; }, [supabaseUser]);
   useEffect(() => { userRef.current = user; }, [user]);
 
   const fetchProfile = useCallback(async (userId: string) => {
-    const { data } = await supabase
-      .from("user_profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
 
-    if (data) {
+      if (error || !data) return;
+
       setUser((prev) => ({
         id: prev?.id || supabaseUserRef.current?.id,
         name: data.full_name || "",
         email: prev?.email || supabaseUserRef.current?.email || "",
         phone: data.phone || "",
       }));
+    } catch {
+      // Table might not exist yet — that's ok
     }
   }, []);
 
   const fetchOrders = useCallback(async (email: string) => {
-    const { data } = await supabase
-      .from("orders")
-      .select("*")
-      .eq("user_email", email)
-      .order("created_at", { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("*")
+        .eq("user_email", email)
+        .order("created_at", { ascending: false });
 
-    if (data) {
+      if (error || !data) return;
+
       setOrders(data.map((o: Record<string, unknown>) => ({
         id: o.id as string,
         date: new Date(o.created_at as string).toLocaleDateString("en-IN"),
@@ -85,6 +89,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         shipping_address: o.shipping_address as Record<string, string> | undefined,
         payment_method: o.payment_method as string | undefined,
       })));
+    } catch {
+      // Table might not exist
     }
   }, []);
 
@@ -100,13 +106,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) return { error: error.message };
     if (data.user) {
       setSupabaseUser(data.user);
-      // Set email on user profile from supabase auth user
-      setUser((prev) => ({
+      setUser({
         id: data.user.id,
-        name: prev?.name || "",
+        name: "",
         email: data.user.email || "",
-        phone: prev?.phone || "",
-      }));
+        phone: "",
+      });
       await fetchProfile(data.user.id);
       await fetchOrders(data.user.email || data.user.id);
     }
@@ -125,13 +130,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (data.user) {
       setSupabaseUser(data.user);
       setUser({ id: data.user.id, name, email, phone });
-      // Profile is auto-created by trigger, but let's ensure phone is saved
-      if (data.user.id) {
+
+      // Try to create/update profile — don't let this fail the signup
+      try {
         await supabase.from("user_profiles").upsert({
           id: data.user.id,
           full_name: name,
           phone,
-        });
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "id" });
+      } catch {
+        // Table might not exist — profile will be created when table is set up
       }
     }
     return {};
@@ -156,43 +165,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const currentUser = supabaseUserRef.current;
     if (!currentUser) return;
     setUser((prev) => prev ? { ...prev, ...data } : null);
-    await supabase.from("user_profiles").upsert({
-      id: currentUser.id,
-      full_name: data.name || userRef.current?.name,
-      phone: data.phone || userRef.current?.phone,
-      updated_at: new Date().toISOString(),
-    });
+    try {
+      await supabase.from("user_profiles").upsert({
+        id: currentUser.id,
+        full_name: data.name || userRef.current?.name,
+        phone: data.phone || userRef.current?.phone,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "id" });
+    } catch {
+      // Table might not exist
+    }
   }, []);
 
   // Initialize: check session on mount
   useEffect(() => {
     const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setSupabaseUser(session.user);
-        setUser((prev) => ({
-          id: session.user.id,
-          name: prev?.name || "",
-          email: session.user.email || "",
-          phone: prev?.phone || "",
-        }));
-        await fetchProfile(session.user.id);
-        await fetchOrders(session.user.email || session.user.id);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setSupabaseUser(session.user);
+          setUser({
+            id: session.user.id,
+            name: "",
+            email: session.user.email || "",
+            phone: "",
+          });
+          await fetchProfile(session.user.id);
+          await fetchOrders(session.user.email || session.user.id);
+        }
+      } catch {
+        // Auth not configured
       }
       setLoading(false);
     };
     init();
 
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session?.user) {
         setSupabaseUser(session.user);
-        setUser((prev) => ({
-          id: session.user!.id,
-          name: prev?.name || "",
-          email: session.user!.email || "",
-          phone: prev?.phone || "",
-        }));
+        setUser({
+          id: session.user.id,
+          name: "",
+          email: session.user.email || "",
+          phone: "",
+        });
         await fetchProfile(session.user.id);
         await fetchOrders(session.user.email || session.user.id);
       } else if (event === "SIGNED_OUT") {
