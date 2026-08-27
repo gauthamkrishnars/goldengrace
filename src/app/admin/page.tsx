@@ -19,6 +19,8 @@ export default function AdminPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [uploadStatus, setUploadStatus] = useState<"idle" | "uploading" | "success" | "error">("idle");
   const [saving, setSaving] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+  const [seedStatus, setSeedStatus] = useState<"idle" | "success" | "error">("idle");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load products from Supabase API
@@ -263,7 +265,33 @@ export default function AdminPage() {
                           className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
                           <Package className="h-4 w-4" /> View All Products
                         </button>
+                        <button
+                          onClick={async () => {
+                            setSeeding(true);
+                            setSeedStatus("idle");
+                            try {
+                              const res = await fetch("/api/seed", { method: "POST" });
+                              const data = await res.json();
+                              if (data.success) {
+                                setSeedStatus("success");
+                                fetchProducts();
+                              } else {
+                                setSeedStatus("error");
+                              }
+                            } catch {
+                              setSeedStatus("error");
+                            }
+                            setSeeding(false);
+                          }}
+                          disabled={seeding}
+                          className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                        >
+                          {seeding ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                          {seeding ? "Seeding..." : "Seed 55 Products to Supabase"}
+                        </button>
                       </div>
+                      {seedStatus === "success" && <p className="text-xs text-green-600 mt-3">✅ All 55 products inserted into Supabase database!</p>}
+                      {seedStatus === "error" && <p className="text-xs text-red-500 mt-3">❌ Seed failed. Run the SQL schema first in Supabase SQL Editor.</p>}
                     </div>
                   </div>
                 )}
