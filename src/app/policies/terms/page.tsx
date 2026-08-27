@@ -20,16 +20,13 @@ export default function TermsOfService() {
           <p>All product images are for illustration purposes only. Actual products may vary slightly in color and appearance. Prices are in Indian Rupees (₹) and are inclusive of all applicable taxes unless stated otherwise.</p>
 
           <h2 className="font-serif text-xl font-bold text-gray-800">Orders and Payment</h2>
-          <p>Orders are subject to acceptance and availability. We reserve the right to refuse or cancel any order. Payment is processed securely through Razorpay. We accept UPI, credit/debit cards, net banking, and EMI options.</p>
+          <p>Orders are subject to acceptance and availability. We reserve the right to refuse or cancel any order. Payment is processed securely through Razorpay. We accept UPI, credit/debit cards, and net banking.</p>
 
           <h2 className="font-serif text-xl font-bold text-gray-800">Shipping and Delivery</h2>
           <p>We offer free shipping on all orders. Estimated delivery is 5-7 business days. Delivery times may vary based on location and product availability.</p>
 
-          <h2 className="font-serif text-xl font-bold text-gray-800">Returns and Exchanges</h2>
-          <p>We offer a 30-day return policy for unused items in original packaging. Lifetime exchange is available on all BIS hallmarked gold jewellery. Diamond jewellery comes with a 30-day money-back guarantee.</p>
-
-          <h2 className="font-serif text-xl font-bold text-gray-800">Gold Mine 10+1 Plan</h2>
-          <p>The Gold Mine 10+1 installment plan allows you to pay in 10 equal monthly installments with a 100% discount on the 11th month. Enrollment is voluntary and subject to terms communicated at the time of signup.</p>
+          <h2 className="font-serif text-xl font-bold text-gray-800">Returns and Refunds</h2>
+          <p>We offer a 30-day return policy for unused items in original packaging. Diamond jewellery comes with a 30-day money-back guarantee.</p>
 
           <h2 className="font-serif text-xl font-bold text-gray-800">Limitation of Liability</h2>
           <p>Golden Grace shall not be liable for any indirect, incidental, or consequential damages arising from the use of our products or services.</p>

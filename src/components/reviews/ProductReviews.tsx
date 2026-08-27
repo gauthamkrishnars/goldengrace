@@ -41,7 +41,7 @@ const mockReviews: Review[] = [
     rating: 5,
     date: "2026-08-05",
     title: "Perfect anniversary gift",
-    body: "Bought this for our 25th anniversary. The attention to detail is remarkable. The lifetime exchange policy gives great peace of mind. Highly recommend!",
+    body: "Bought this for our 25th anniversary. The attention to detail is remarkable. The quality is outstanding. Highly recommend!",
     helpful: 31,
     verified: true,
   },

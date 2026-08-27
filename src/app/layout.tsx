@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     default: "Golden Grace - Premium Fine Jewellery | BIS Hallmarked Diamonds & Gold",
     template: "%s | Golden Grace",
   },
-  description: "Discover exquisite fine jewellery at Golden Grace. BIS hallmarked diamonds, gold, and gemstone jewellery with lifetime exchange guarantee. Shop rings, necklaces, earrings, bangles and more.",
+  description: "Discover exquisite fine jewellery at Golden Grace. BIS hallmarked diamonds, gold, and gemstone jewellery. Shop rings, necklaces, earrings, bangles and more.",
   keywords: ["fine jewellery", "diamond jewellery", "gold jewellery", "BIS hallmarked", "rings", "necklaces", "earrings", "bangles", "pendants", "wedding jewellery"],
   authors: [{ name: "Golden Grace" }],
   openGraph: {
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     url: process.env.NEXT_PUBLIC_SITE_URL || "https://goldengrace.com",
     siteName: "Golden Grace",
     title: "Golden Grace - Premium Fine Jewellery",
-    description: "BIS hallmarked diamonds, gold, and gemstone jewellery with lifetime exchange guarantee.",
+    description: "BIS hallmarked diamonds, gold, and gemstone jewellery.",
     images: [
       {
         url: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=1200&h=630&fit=crop&q=80",
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Golden Grace - Premium Fine Jewellery",
-    description: "BIS hallmarked diamonds, gold, and gemstone jewellery with lifetime exchange guarantee.",
+    description: "BIS hallmarked diamonds, gold, and gemstone jewellery.",
     images: ["https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=1200&h=630&fit=crop&q=80"],
   },
   robots: {

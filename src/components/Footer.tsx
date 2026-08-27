@@ -27,7 +27,7 @@ export default function Footer() {
               GOLDEN GRACE
             </Link>
             <p className="text-sm text-gray-400 leading-relaxed mb-4 max-w-sm">
-              Your most trusted online jewellery brand. Every piece is BIS hallmarked and comes with a lifetime exchange guarantee.
+              Your most trusted online jewellery brand. Every piece is BIS hallmarked and crafted with precision.
             </p>
             <div className="flex gap-3">
               {["Facebook", "Instagram", "Twitter", "YouTube"].map((social) => (
@@ -68,7 +68,7 @@ export default function Footer() {
               <li><Link href="/policies/privacy" className="text-sm text-gray-400 hover:text-white transition-colors">Privacy Policy</Link></li>
               <li><Link href="/policies/terms" className="text-sm text-gray-400 hover:text-white transition-colors">Terms of Service</Link></li>
               <li><Link href="/policies/shipping" className="text-sm text-gray-400 hover:text-white transition-colors">Shipping Policy</Link></li>
-              <li><Link href="/policies/returns" className="text-sm text-gray-400 hover:text-white transition-colors">Returns & Exchange</Link></li>
+              <li><Link href="/policies/returns" className="text-sm text-gray-400 hover:text-white transition-colors">Returns & Refunds</Link></li>
               <li><Link href="/auth/login" className="text-sm text-gray-400 hover:text-white transition-colors">Sign In</Link></li>
             </ul>
           </div>
@@ -85,7 +85,7 @@ export default function Footer() {
             <span>•</span>
             <span>IGI Certified</span>
             <span>•</span>
-            <span>Lifetime Exchange</span>
+            <span>BIS Hallmarked</span>
           </div>
         </div>
       </div>

@@ -183,7 +183,7 @@ export default function ProductDetailPage() {
 
             <div className="bg-accent-pink rounded-xl p-3">
               <p className="text-xs text-accent-rose-gold font-semibold">
-                🚚 Free shipping on all orders • 💎 BIS Hallmarked • 🔄 Lifetime exchange
+                🚚 Free shipping on all orders • 💎 BIS Hallmarked • ✅ Quality assured
               </p>
             </div>
 
@@ -210,7 +210,7 @@ export default function ProductDetailPage() {
 
             <div className="grid grid-cols-3 gap-3 pt-2">
               <div className="text-center"><Truck className="h-5 w-5 text-brand mx-auto mb-1" /><p className="text-[10px] text-gray-500">Free Shipping</p></div>
-              <div className="text-center"><Shield className="h-5 w-5 text-brand mx-auto mb-1" /><p className="text-[10px] text-gray-500">Lifetime Exchange</p></div>
+              <div className="text-center"><Shield className="h-5 w-5 text-brand mx-auto mb-1" /><p className="text-[10px] text-gray-500">Quality Assured</p></div>
               <div className="text-center"><RotateCcw className="h-5 w-5 text-brand mx-auto mb-1" /><p className="text-[10px] text-gray-500">30-Day Returns</p></div>
             </div>
 

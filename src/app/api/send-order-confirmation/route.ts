@@ -148,7 +148,7 @@ function buildEmailHtml(data: OrderEmailData): string {
         <!-- Footer -->
         <div style="background:#111827;padding:24px 32px;text-align:center;">
           <p style="color:rgba(255,255,255,0.5);font-size:11px;margin:0 0 8px;letter-spacing:1px;">GOLDEN GRACE</p>
-          <p style="color:rgba(255,255,255,0.3);font-size:10px;margin:0;">BIS Hallmarked • IGI Certified • Lifetime Exchange</p>
+          <p style="color:rgba(255,255,255,0.3);font-size:10px;margin:0;">BIS Hallmarked • IGI Certified • Quality Assured</p>
         </div>
       </div>
     </body>
