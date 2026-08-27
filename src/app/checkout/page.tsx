@@ -194,6 +194,20 @@ export default function CheckoutPage() {
           paymentId,
         }),
       });
+
+      // Send confirmation email (non-blocking)
+      fetch("/api/send-order-confirmation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: id,
+          customerName: user?.name || checkoutEmail.split("@")[0],
+          customerEmail: user?.email || checkoutEmail,
+          items: orderItems,
+          total: totalPrice,
+          shippingAddress: address,
+        }),
+      }).catch(() => {});
     } catch {
       console.error("Failed to save order");
     }

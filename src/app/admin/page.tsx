@@ -40,9 +40,12 @@ export default function AdminPage() {
     sku: "", tags: "", isNew: false, isBestseller: false, images: [] as string[],
   });
 
-  // Load products when authenticated
+  // Load products and orders when authenticated
   useEffect(() => {
-    if (authenticated) fetchProducts();
+    if (authenticated) {
+      fetchProducts();
+      fetchOrders();
+    }
   }, [authenticated]);
 
   const fetchOrders = async () => {
@@ -302,14 +305,16 @@ export default function AdminPage() {
               </div>
             ) : (
               <>
-                {activeTab === "dashboard" && (
+                {activeTab === "dashboard" && (() => {
+                  const totalRevenue = orderList.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
+                  return (
                   <div className="space-y-6">
                     <h2 className="font-serif text-2xl font-bold text-gray-800">Dashboard</h2>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       {[
                         { label: "Total Products", value: productList.length, icon: Package },
-                        { label: "Categories", value: categories.length, icon: LayoutDashboard },
-                        { label: "Avg. Price", value: formatPrice(Math.round(avgPrice)), icon: Package },
+                        { label: "Total Orders", value: orderList.length, icon: Package },
+                        { label: "Revenue", value: formatPrice(Math.round(totalRevenue)), icon: Package },
                         { label: "In Stock", value: productList.filter((p) => p.inStock).length, icon: CheckCircle },
                       ].map((stat) => {
                         const Icon = stat.icon;
@@ -359,7 +364,7 @@ export default function AdminPage() {
                       {seedStatus === "error" && <p className="text-xs text-red-500 mt-3">Seed failed. Run the SQL schema first in Supabase SQL Editor.</p>}
                     </div>
                   </div>
-                )}
+                  );})()}
 
                 {activeTab === "products" && (
                   <div>
@@ -484,12 +489,26 @@ export default function AdminPage() {
                             <div className="border-t border-gray-50 pt-4 mt-2">
                               <div className="flex justify-between text-sm">
                                 <span className="text-gray-500">Customer</span>
-                                <span className="text-gray-800">{order.customer_name || 'N/A'}</span>
+                                <span className="text-gray-800">{order.user_name || 'N/A'}</span>
                               </div>
                               <div className="flex justify-between text-sm mt-1">
                                 <span className="text-gray-500">Email</span>
-                                <span className="text-gray-800">{order.customer_email || 'N/A'}</span>
+                                <span className="text-gray-800">{order.user_email || 'N/A'}</span>
                               </div>
+                              {order.user_phone && (
+                              <div className="flex justify-between text-sm mt-1">
+                                <span className="text-gray-500">Phone</span>
+                                <span className="text-gray-800">{order.user_phone}</span>
+                              </div>
+                              )}
+                              {order.shipping_address && (
+                              <div className="flex justify-between text-sm mt-1">
+                                <span className="text-gray-500">Address</span>
+                                <span className="text-gray-800 text-right max-w-[250px]">
+                                  {[order.shipping_address.addressLine1, order.shipping_address.city, order.shipping_address.state, order.shipping_address.pincode].filter(Boolean).join(', ')}
+                                </span>
+                              </div>
+                              )}
                               <div className="flex justify-between text-sm mt-1">
                                 <span className="text-gray-500">Payment</span>
                                 <span className="text-gray-800">{order.payment_method || 'N/A'}</span>
