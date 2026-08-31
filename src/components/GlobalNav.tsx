@@ -47,7 +47,7 @@ export default function GlobalNav() {
           {/* Center: Brand Logo */}
           <Link href="/" className="flex-1 flex justify-center">
             <h1 className="font-serif text-base md:text-2xl font-bold tracking-wide text-gray-800 truncate">
-              GOLDEN GRACE
+              GOLDEN GRACE - DESIGNED BY GAUTHAM
             </h1>
           </Link>
 
