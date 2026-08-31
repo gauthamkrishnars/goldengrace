@@ -78,7 +78,7 @@ export default function Footer() {
           <p className="text-xs text-gray-500 select-none cursor-default" onClick={handleCopyrightClick}
             title={clickCount > 0 ? `${5 - clickCount} more clicks...` : ""}>
             &copy; 2026 Golden Grace. All rights reserved. Made by{" "}
-            <span className="text-gray-400 font-medium">DevCore Studio</span>.
+            <a href="https://devcorestudio.xyz" target="_blank" rel="noopener noreferrer" className="text-gray-400 font-medium hover:text-white transition-colors">DevCore Studio</a>.
           </p>
           <div className="flex gap-4 text-xs text-gray-500">
             <span>BIS Hallmarked</span>
