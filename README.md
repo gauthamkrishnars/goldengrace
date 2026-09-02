@@ -3,7 +3,6 @@
 A full-featured, production-ready e-commerce website for fine jewellery. Built with Next.js 16, Supabase, and Razorpay.
 
 **Live:** [goldengrace.vercel.app](https://goldengrace.vercel.app)
-**Admin Panel:** [/admin](https://goldengrace.vercel.app/admin) — password: `goldengrace`
 
 ---
 
