@@ -45,14 +45,14 @@ export default function GlobalNav() {
           </div>
 
           {/* Center: Brand Logo */}
-          <Link href="/" className="flex-1 flex justify-center">
-            <h1 className="font-serif text-base md:text-2xl font-bold tracking-wide text-gray-800 truncate">
-              GOLDEN GRACE - DESIGNED BY GAUTHAM
+          <Link href="/" className="flex-1 flex justify-center min-w-0">
+            <h1 className="font-serif text-sm sm:text-base md:text-2xl font-bold tracking-wide text-gray-800 whitespace-nowrap">
+              GOLDEN GRACE
             </h1>
           </Link>
 
           {/* Right Icons */}
-          <div className="flex items-center gap-0 shrink-0">
+          <div className="flex items-center gap-1 md:gap-0 shrink-0">
             <Link
               href="/search"
               className="p-1.5 md:p-2 rounded-md hover:bg-gray-50 transition-colors"
